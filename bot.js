@@ -6,7 +6,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env'), override: true })
 const { Telegraf } = require('telegraf');
 const { authMiddleware } = require('./src/bot/middleware/auth');
 const { rateLimitMiddleware } = require('./src/bot/middleware/rateLimit');
-const { handleTest } = require('./src/bot/handlers/testHandler');
+const { handleTest, handleRegress } = require('./src/bot/handlers/testHandler');
 const { handleChecklist } = require('./src/bot/handlers/checklistHandler');
 const { handleInvestigate } = require('./src/bot/handlers/investigateHandler');
 
@@ -33,9 +33,17 @@ _Пример: test run TC\\-001_
 Сгенерировать QA чеклист
 _Пример: checklist https://cabinet.nomad.kz/login поле иин_
 
+\`test retry <TC\\-001>\`
+Перезапустить только упавшие тесты из прогона
+_Пример: test retry TC\\-001_
+
+\`regress\`
+Регресс\\-прогон всех тестов \\(последний TC на каждую фичу\\)
+_Пример: regress_
+_Пример: regress cabinet.nomad.kz_ \\(фильтр по URL\\)
+
 \`investigate <лог ошибки>\`
 Анализ причины падения теста
-_Пример: investigate TimeoutError: locator not found_
 
 \`help\`
 Показать это сообщение`;
@@ -55,6 +63,9 @@ bot.on('text', async (ctx) => {
   switch (command.toLowerCase()) {
     case 'test':
       return rateLimitMiddleware(ctx, () => handleTest(ctx, args));
+
+    case 'regress':
+      return rateLimitMiddleware(ctx, () => handleRegress(ctx, args));
 
     case 'checklist':
       return rateLimitMiddleware(ctx, () => handleChecklist(ctx, args));

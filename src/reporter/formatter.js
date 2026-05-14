@@ -32,4 +32,31 @@ function splitIntoChunks(text, maxLen = MAX_TELEGRAM_MSG) {
   return chunks.length ? chunks : [text.slice(0, maxLen)];
 }
 
-module.exports = { formatTestResult, splitIntoChunks };
+// Strip ANSI escape codes from error messages
+function stripAnsi(str) {
+  return str.replace(/\x1B\[[0-9;]*m/g, '').replace(/\[[\d;]*m/g, '').trim();
+}
+
+function formatMiniReport(tests, testId, feature) {
+  if (!tests || !tests.length) return null;
+
+  const passed = tests.filter((t) => t.status === 'passed').length;
+  const failed = tests.filter((t) => t.status !== 'passed').length;
+  const icon = failed === 0 ? '✅' : '❌';
+
+  const lines = [`${icon} ${testId} | ${feature} | ${passed}/${tests.length} прошло`];
+
+  for (const t of tests) {
+    if (t.status === 'passed') {
+      lines.push(`  ✓ ${t.title}`);
+    } else {
+      const rawErr = t.error ? stripAnsi(t.error).split('\n')[0].slice(0, 120) : '';
+      const errMsg = rawErr ? ` — Ошибка: ${rawErr}` : '';
+      lines.push(`  ✗ ${t.title}${errMsg}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+module.exports = { formatTestResult, formatMiniReport, splitIntoChunks };

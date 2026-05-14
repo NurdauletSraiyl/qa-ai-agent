@@ -42,4 +42,4 @@ async function getRegistry() {
   return loadRegistry();
 }
 
-module.exports = { registerTest, getRegistry, nextId };
+module.exports = { registerTest, getRegistry, saveRegistry, nextId };

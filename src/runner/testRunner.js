@@ -64,20 +64,63 @@ async function saveTest(code, featureName, testId) {
   return { filePath, safeName, fileName };
 }
 
-function runTests(specFile) {
+function parseJsonResults(jsonStr) {
+  try {
+    // Playwright may emit non-JSON lines before the JSON blob — find the first '{'
+    const start = jsonStr.indexOf('{');
+    const end = jsonStr.lastIndexOf('}');
+    if (start === -1 || end === -1) return null;
+    const data = JSON.parse(jsonStr.slice(start, end + 1));
+    const tests = [];
+    for (const suite of (data.suites || [])) {
+      collectTests(suite, tests);
+    }
+    return tests;
+  } catch {
+    return null;
+  }
+}
+
+function collectTests(suite, out) {
+  for (const spec of (suite.specs || [])) {
+    for (const test of (spec.tests || [])) {
+      const result = (test.results || [])[0] || {};
+      const error = result.error ? (result.error.message || '').split('\n')[0] : null;
+      out.push({
+        title: spec.title,
+        status: result.status || 'unknown',
+        error,
+      });
+    }
+  }
+  for (const child of (suite.suites || [])) {
+    collectTests(child, out);
+  }
+}
+
+function runTests(specFile, grepTitles) {
   return new Promise((resolve) => {
-    // Run playwright from the main project directory so it finds the right config and tests
     const projectDir = path.dirname(TESTS_DIR);
-
     const safeSpec = specFile ? `"${path.resolve(specFile)}"` : null;
-    const cmd = safeSpec
-      ? `npx playwright test ${safeSpec} --project=chromium --timeout=20000 --reporter=list`
-      : 'npx playwright test --project=chromium --timeout=20000 --reporter=list';
 
-    exec(cmd, { timeout: 60_000, cwd: projectDir }, (err, stdout, stderr) => {
+    let grep = '';
+    if (grepTitles && grepTitles.length > 0) {
+      const pattern = grepTitles.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+      grep = ` --grep "${pattern}"`;
+    }
+
+    const cmd = safeSpec
+      ? `npx playwright test ${safeSpec} --project=chromium --timeout=30000 --reporter=json${grep}`
+      : `npx playwright test --project=chromium --timeout=30000 --reporter=json${grep}`;
+
+    exec(cmd, { timeout: 300_000, cwd: projectDir, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+      const tests = parseJsonResults(stdout);
+      const allPassed = tests ? tests.every((t) => t.status === 'passed') : !err;
+      const rawOutput = (stdout + stderr || err?.message || 'No output').slice(0, 3000);
       resolve({
-        success: !err,
-        output: (stdout + stderr || err?.message || 'No output').slice(0, 3000),
+        success: allPassed,
+        output: rawOutput,
+        tests,
       });
     });
   });
