@@ -28,11 +28,11 @@ async function handleChecklist(ctx, args) {
 
   try {
     const checklist = await generateChecklist(url, feature);
-    const header = `📋 *QA Чеклист: ${feature}*\n\n`;
+    const header = `📋 QA Чеклист: ${feature}\n\n`;
     const chunks = splitIntoChunks(header + checklist);
 
     for (const chunk of chunks) {
-      await ctx.reply(chunk, { parse_mode: 'Markdown' });
+      await ctx.reply(chunk);
     }
   } catch (err) {
     console.error('[checklistHandler] error:', err.message);

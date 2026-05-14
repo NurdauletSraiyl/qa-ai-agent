@@ -32,14 +32,14 @@ async function handleTest(ctx, args) {
     const { success, output } = await runTests(filePath);
     const report = formatTestResult(output, success);
 
-    await ctx.reply(report, { parse_mode: 'Markdown' });
+    await ctx.reply(report);
 
     if (!success) {
       await ctx.reply('🔍 AI анализирует причину падения...');
       const analysis = await investigateBug(output);
-      const chunks = splitIntoChunks(`📊 *Анализ ошибки*\n\n${analysis}`);
+      const chunks = splitIntoChunks(`📊 Анализ ошибки\n\n${analysis}`);
       for (const chunk of chunks) {
-        await ctx.reply(chunk, { parse_mode: 'Markdown' });
+        await ctx.reply(chunk);
       }
     }
   } catch (err) {

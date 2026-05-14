@@ -17,9 +17,9 @@ async function handleInvestigate(ctx, args) {
 
   try {
     const analysis = await investigateBug(log);
-    const chunks = splitIntoChunks(`🔬 *Анализ ошибки*\n\n${analysis}`);
+    const chunks = splitIntoChunks(`🔬 Анализ ошибки\n\n${analysis}`);
     for (const chunk of chunks) {
-      await ctx.reply(chunk, { parse_mode: 'Markdown' });
+      await ctx.reply(chunk);
     }
   } catch (err) {
     console.error('[investigateHandler] error:', err.message);

@@ -6,7 +6,7 @@ function formatTestResult(output, success) {
   const icon = success ? '✅' : '❌';
   const label = success ? 'Тесты прошли' : 'Тесты упали';
   const lines = output.split('\n').slice(-20).join('\n');
-  return `${icon} *${label}*\n\n\`\`\`\n${lines}\n\`\`\``;
+  return `${icon} ${label}\n\n${lines}`;
 }
 
 function splitIntoChunks(text, maxLen = MAX_TELEGRAM_MSG) {
