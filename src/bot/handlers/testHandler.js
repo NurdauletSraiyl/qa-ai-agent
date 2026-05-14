@@ -20,7 +20,7 @@ async function sendWithRetry(ctx, pdfPath, tsPath, testId, feature, fileName, at
         { caption: `📄 ${testId} — ${feature}\nФайл: ${fileName}` }
       );
       console.log('[send] PDF sent successfully');
-      return;
+      return true;
     } catch (err) {
       console.error(`[send] attempt ${i} failed:`, err.message);
       const isLastAttempt = i === attempts;
@@ -32,9 +32,10 @@ async function sendWithRetry(ctx, pdfPath, tsPath, testId, feature, fileName, at
             { caption: `📄 ${testId} — ${feature}\n(PDF не удалось, отправлен .ts)` }
           );
           console.log('[send] .ts file sent');
+          return true;
         } catch (err2) {
           console.error('[send] .ts fallback failed:', err2.message);
-          await ctx.reply(`📄 ${testId} — тест сохранён локально: ${fileName}`).catch(() => {});
+          return false;
         }
       } else {
         await new Promise((r) => setTimeout(r, i * 2000));
@@ -85,7 +86,7 @@ async function handleTest(ctx, args) {
       await fs.writeJson(path.join(testsDir, 'registry.json'), reg, { spaces: 2 });
     }
 
-    await progress.update('📄 Отправляю файл');
+    await progress.update('📄 Отправляю тест');
     console.log('[test] generating PDF...');
     pdfPath = await generatePdf(`${testId}: ${feature}`, code);
     console.log('[test] PDF generated:', pdfPath);
@@ -93,7 +94,13 @@ async function handleTest(ctx, args) {
     await progress.done(`✅ ${testId} — тест сгенерирован`);
 
     console.log('[test] sending file...');
-    await sendWithRetry(ctx, pdfPath, filePath, testId, feature, fileName);
+    const sent = await sendWithRetry(ctx, pdfPath, filePath, testId, feature, fileName);
+    if (!sent) {
+      // File upload failed — send code as text chunks
+      console.log('[test] upload failed, sending as text');
+      const chunks = splitIntoChunks(`📄 ${testId} — ${feature}\n\n${code}`);
+      for (const chunk of chunks) await ctx.reply(chunk);
+    }
     console.log('[test] file sent');
 
     const runProgress = await new Progress(ctx, `🚀 Запускаю ${testId}`).start();

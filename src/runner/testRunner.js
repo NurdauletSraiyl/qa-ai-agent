@@ -66,18 +66,18 @@ async function saveTest(code, featureName, testId) {
 
 function runTests(specFile) {
   return new Promise((resolve) => {
-    const safeSpec = specFile
-      ? path.normalize(specFile).replace(/\.\./g, '')
-      : null;
+    // Run playwright from the main project directory so it finds the right config and tests
+    const projectDir = path.dirname(TESTS_DIR);
 
+    const safeSpec = specFile ? `"${path.resolve(specFile)}"` : null;
     const cmd = safeSpec
-      ? `npx playwright test "${safeSpec}" --project=chromium --timeout=20000 --reporter=list`
+      ? `npx playwright test ${safeSpec} --project=chromium --timeout=20000 --reporter=list`
       : 'npx playwright test --project=chromium --timeout=20000 --reporter=list';
 
-    exec(cmd, { timeout: 60_000, cwd: process.cwd() }, (err, stdout, stderr) => {
+    exec(cmd, { timeout: 60_000, cwd: projectDir }, (err, stdout, stderr) => {
       resolve({
         success: !err,
-        output: (stdout || stderr || err?.message || 'No output').slice(0, 3000),
+        output: (stdout + stderr || err?.message || 'No output').slice(0, 3000),
       });
     });
   });
