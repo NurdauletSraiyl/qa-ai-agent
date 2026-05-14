@@ -23,7 +23,7 @@ async function generateTest(url, feature) {
     messages: [
       {
         role: 'user',
-        content: `Generate a Playwright TypeScript test for:\nURL: ${url}\nFeature: ${feature}\n\nReturn ONLY the complete TypeScript test file code, wrapped in a typescript code block.`,
+        content: `Generate a Playwright TypeScript test for:\nURL: ${url}\nFeature: ${feature}\n\nCRITICAL REQUIREMENTS:\n- Self-contained single file — NO Page Object imports, NO external dependencies\n- Use only: import { test, expect } from '@playwright/test';\n- No nullish coalescing operator ?? — use || instead\n- No optional chaining ?. inside template literals — use explicit ternary\n- All logic inline inside the test file\n- Return ONLY the complete TypeScript code wrapped in a \`\`\`typescript block`,
       },
     ],
   });
