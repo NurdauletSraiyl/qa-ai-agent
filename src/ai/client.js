@@ -3,13 +3,25 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { loadPrompt } = require('./promptLoader');
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = 'claude-opus-4-7';
+
+let _anthropic = null;
+
+function getClient() {
+  if (!_anthropic) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_API_KEY не задан в .env файле');
+    }
+    _anthropic = new Anthropic({ apiKey });
+  }
+  return _anthropic;
+}
 
 async function generateTest(url, feature) {
   const systemPrompt = await loadPrompt('qa-test-generator');
 
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: MODEL,
     max_tokens: 4096,
     thinking: { type: 'adaptive' },
@@ -34,7 +46,7 @@ async function generateTest(url, feature) {
 async function generateChecklist(url, feature) {
   const systemPrompt = await loadPrompt('qa-checklist');
 
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: MODEL,
     max_tokens: 4096,
     thinking: { type: 'adaptive' },
@@ -59,7 +71,7 @@ async function generateChecklist(url, feature) {
 async function investigateBug(failureLog) {
   const systemPrompt = await loadPrompt('bug-investigator');
 
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: MODEL,
     max_tokens: 2048,
     system: [
@@ -83,7 +95,7 @@ async function investigateBug(failureLog) {
 async function generateReport(testResults) {
   const systemPrompt = await loadPrompt('qa-reporter');
 
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: MODEL,
     max_tokens: 3000,
     system: [
