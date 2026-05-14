@@ -4,7 +4,7 @@ const MAX_TELEGRAM_MSG = 3800;
 
 function formatTestResult(output, success) {
   const icon = success ? '✅' : '❌';
-  const label = success ? 'Tests passed' : 'Tests failed';
+  const label = success ? 'Тесты прошли' : 'Тесты упали';
   const lines = output.split('\n').slice(-20).join('\n');
   return `${icon} *${label}*\n\n\`\`\`\n${lines}\n\`\`\``;
 }

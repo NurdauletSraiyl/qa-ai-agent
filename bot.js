@@ -13,22 +13,22 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 
 const HELP_TEXT = `🤖 *QA AI Agent*
 
-*Commands:*
+*Команды:*
 
 \`test <url> <feature>\`
-Generate AI test & run it
-_Example: test https://site.com login form_
+Сгенерировать AI тест и запустить
+_Пример: test https://cabinet.nomad.kz/login поле иин_
 
 \`checklist <url> <feature>\`
-Generate deep QA checklist
-_Example: checklist https://site.com iin field_
+Сгенерировать QA чеклист
+_Пример: checklist https://cabinet.nomad.kz/login поле иин_
 
-\`investigate <error log>\`
-AI root cause analysis
-_Example: investigate TimeoutError: locator not found_
+\`investigate <лог ошибки>\`
+Анализ причины падения теста
+_Пример: investigate TimeoutError: locator not found_
 
 \`help\`
-Show this message`;
+Показать это сообщение`;
 
 bot.use(authMiddleware);
 
@@ -57,7 +57,7 @@ bot.on('text', async (ctx) => {
 
     default:
       return ctx.reply(
-        '❓ Unknown command. Type `help` for available commands.',
+        '❓ Неизвестная команда. Напиши `help` для списка команд.',
         { parse_mode: 'Markdown' }
       );
   }
@@ -65,7 +65,7 @@ bot.on('text', async (ctx) => {
 
 bot.catch((err, ctx) => {
   console.error('[bot] unhandled error:', err.message);
-  ctx.reply('❌ An unexpected error occurred. Please try again.').catch(() => {});
+  ctx.reply('❌ Произошла неожиданная ошибка. Попробуй ещё раз.').catch(() => {});
 });
 
 bot.launch({ dropPendingUpdates: true });

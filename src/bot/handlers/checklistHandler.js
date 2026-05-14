@@ -6,7 +6,7 @@ const { splitIntoChunks } = require('../../reporter/formatter');
 async function handleChecklist(ctx, args) {
   if (args.length < 1) {
     return ctx.reply(
-      'Usage:\n`checklist <url> <feature>`\nor\n`checklist <feature>`\n\nExamples:\n`checklist https://site.com iin field`\n`checklist login form validation`',
+      'Использование:\n`checklist <url> <фича>`\nили\n`checklist <фича>`\n\nПримеры:\n`checklist https://cabinet.nomad.kz/login поле иин`\n`checklist валидация формы входа`',
       { parse_mode: 'Markdown' }
     );
   }
@@ -21,14 +21,14 @@ async function handleChecklist(ctx, args) {
 
   const feature = featureParts.join(' ');
   if (!feature.trim()) {
-    return ctx.reply('⚠️ Please provide a feature description after the URL.');
+    return ctx.reply('⚠️ Укажи описание фичи после URL.');
   }
 
-  await ctx.reply('🧠 AI is generating QA checklist...');
+  await ctx.reply('🧠 AI генерирует QA чеклист...');
 
   try {
     const checklist = await generateChecklist(url, feature);
-    const header = `📋 *QA Checklist: ${feature}*\n\n`;
+    const header = `📋 *QA Чеклист: ${feature}*\n\n`;
     const chunks = splitIntoChunks(header + checklist);
 
     for (const chunk of chunks) {
@@ -36,7 +36,7 @@ async function handleChecklist(ctx, args) {
     }
   } catch (err) {
     console.error('[checklistHandler] error:', err.message);
-    await ctx.reply(`❌ Error: ${err.message}`);
+    await ctx.reply(`❌ Ошибка: ${err.message}`);
   }
 }
 

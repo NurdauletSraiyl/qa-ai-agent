@@ -7,7 +7,7 @@ const { formatTestResult, splitIntoChunks } = require('../../reporter/formatter'
 async function handleTest(ctx, args) {
   if (args.length < 2) {
     return ctx.reply(
-      'Usage: `test <url> <feature description>`\n\nExample:\n`test https://site.com login form`',
+      'Использование: `test <url> <описание фичи>`\n\nПример:\n`test https://cabinet.nomad.kz/login поле иин`',
       { parse_mode: 'Markdown' }
     );
   }
@@ -16,18 +16,18 @@ async function handleTest(ctx, args) {
   const feature = featureParts.join(' ');
 
   if (!validateUrl(url)) {
-    return ctx.reply('⚠️ Invalid URL. Must start with http:// or https://');
+    return ctx.reply('⚠️ Некорректный URL. Должен начинаться с http:// или https://');
   }
 
-  const statusMsg = await ctx.reply('🧠 AI is generating Playwright test...');
+  const statusMsg = await ctx.reply('🧠 AI генерирует Playwright тест...');
 
   try {
     const aiResponse = await generateTest(url, feature);
     const code = extractCodeBlock(aiResponse);
     const { filePath } = await saveTest(code, feature);
 
-    await ctx.reply(`📁 Test created: \`${filePath}\``, { parse_mode: 'Markdown' });
-    await ctx.reply('🚀 Running test...');
+    await ctx.reply(`📁 Тест создан: \`${filePath}\``, { parse_mode: 'Markdown' });
+    await ctx.reply('🚀 Запускаю тест...');
 
     const { success, output } = await runTests(filePath);
     const report = formatTestResult(output, success);
@@ -35,16 +35,16 @@ async function handleTest(ctx, args) {
     await ctx.reply(report, { parse_mode: 'Markdown' });
 
     if (!success) {
-      await ctx.reply('🔍 AI is investigating the failure...');
+      await ctx.reply('🔍 AI анализирует причину падения...');
       const analysis = await investigateBug(output);
-      const chunks = splitIntoChunks(`📊 *Bug Analysis*\n\n${analysis}`);
+      const chunks = splitIntoChunks(`📊 *Анализ ошибки*\n\n${analysis}`);
       for (const chunk of chunks) {
         await ctx.reply(chunk, { parse_mode: 'Markdown' });
       }
     }
   } catch (err) {
     console.error('[testHandler] error:', err.message);
-    await ctx.reply(`❌ Error: ${err.message}`);
+    await ctx.reply(`❌ Ошибка: ${err.message}`);
   }
 }
 

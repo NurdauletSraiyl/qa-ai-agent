@@ -8,7 +8,7 @@ const ALLOWED_USERS = (process.env.ALLOWED_USERS || '')
 function authMiddleware(ctx, next) {
   const userId = ctx.from?.id;
   if (!userId || !ALLOWED_USERS.includes(userId)) {
-    return ctx.reply('⛔ Access denied.');
+    return ctx.reply('⛔ Доступ запрещён.');
   }
   return next();
 }

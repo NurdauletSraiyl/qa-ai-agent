@@ -11,7 +11,7 @@ function rateLimitMiddleware(ctx, next) {
 
   if (elapsed < COOLDOWN_MS) {
     const remaining = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
-    return ctx.reply(`⏳ Please wait ${remaining}s before next request.`);
+    return ctx.reply(`⏳ Подожди ещё ${remaining} сек. перед следующим запросом.`);
   }
 
   lastRequest.set(userId, now);
