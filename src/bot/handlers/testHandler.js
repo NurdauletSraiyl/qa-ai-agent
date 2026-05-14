@@ -60,15 +60,19 @@ async function handleTest(ctx, args) {
   let pdfPath = null;
 
   try {
+    console.log(`[test] start: feature="${feature}" url="${url}"`);
     progress = await new Progress(ctx, '🧠 AI генерирует тест').start();
+
+    console.log('[test] calling generateTest...');
     const aiResponse = await generateTest(url, feature);
+    console.log('[test] generateTest done, length:', aiResponse.length);
 
     await progress.update('💾 Сохраняю тест');
     const code = extractCodeBlock(aiResponse);
     const testId = await registerTest(feature, url, '');
     const { filePath, fileName } = await saveTest(code, feature, testId);
+    console.log(`[test] saved: ${filePath}`);
 
-    // Update registry with real file path
     const reg = await getRegistry();
     if (reg[testId]) {
       reg[testId].file = filePath;
@@ -76,15 +80,21 @@ async function handleTest(ctx, args) {
     }
 
     await progress.update('📄 Отправляю файл');
+    console.log('[test] generating PDF...');
     pdfPath = await generatePdf(`${testId}: ${feature}`, code);
+    console.log('[test] PDF generated:', pdfPath);
 
     await progress.done(`✅ ${testId} — тест сгенерирован`);
 
+    console.log('[test] sending file...');
     await sendWithRetry(ctx, pdfPath, filePath, testId, feature, fileName);
+    console.log('[test] file sent');
 
     const runProgress = await new Progress(ctx, `🚀 Запускаю ${testId}`).start();
 
+    console.log('[test] running playwright...');
     const { success, output } = await runTests(filePath);
+    console.log(`[test] playwright done: success=${success}, output length=${output.length}`);
     await runProgress.done(formatTestResult(output, success, testId));
 
     if (!success) {
@@ -101,7 +111,8 @@ async function handleTest(ctx, args) {
       }
     }
   } catch (err) {
-    console.error('[testHandler] error:', err.message);
+    console.error('[testHandler] CAUGHT ERROR:', err.message);
+    console.error('[testHandler] stack:', err.stack);
     if (progress) await progress.fail(err.message);
     else await ctx.reply(`❌ ${err.message}`).catch(() => {});
   } finally {

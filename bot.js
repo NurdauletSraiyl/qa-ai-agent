@@ -10,7 +10,9 @@ const { handleTest } = require('./src/bot/handlers/testHandler');
 const { handleChecklist } = require('./src/bot/handlers/checklistHandler');
 const { handleInvestigate } = require('./src/bot/handlers/investigateHandler');
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const bot = new Telegraf(process.env.BOT_TOKEN, {
+  handlerTimeout: 10 * 60 * 1000, // 10 minutes — AI gen + PDF upload + playwright
+});
 
 const HELP_TEXT = `🤖 *QA AI Agent*
 
@@ -73,12 +75,12 @@ bot.on('text', async (ctx) => {
 
 bot.catch((err, ctx) => {
   const msg = err.message || '';
-  // Ignore network-level errors (socket hang up, ECONNRESET) — handlers have their own retry
+  console.error('[bot.catch] error:', msg);
+  console.error('[bot.catch] stack:', err.stack);
   if (msg.includes('socket hang up') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT')) {
-    console.warn('[bot] network error (ignored):', msg);
+    console.warn('[bot.catch] network error (ignored):', msg);
     return;
   }
-  console.error('[bot] unhandled error:', msg);
   ctx.reply('❌ Произошла неожиданная ошибка. Попробуй ещё раз.').catch(() => {});
 });
 
