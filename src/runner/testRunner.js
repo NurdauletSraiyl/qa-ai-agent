@@ -41,12 +41,13 @@ function sanitizeCode(code) {
     .trim();
 }
 
-async function saveTest(code, featureName) {
+async function saveTest(code, featureName, testId) {
   const safeName = sanitizeFileName(featureName);
-  const filePath = path.join('tests', 'ui', `${safeName}.spec.ts`);
+  const fileName = `${testId}_${safeName}.spec.ts`;
+  const filePath = path.join('tests', 'ui', fileName);
   await fs.ensureDir(path.join('tests', 'ui'));
   await fs.writeFile(filePath, code, 'utf-8');
-  return { filePath, safeName };
+  return { filePath, safeName, fileName };
 }
 
 function runTests(specFile) {

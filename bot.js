@@ -16,11 +16,18 @@ const HELP_TEXT = `🤖 *QA AI Agent*
 
 *Команды:*
 
-\`test <url> <feature>\`
-Сгенерировать AI тест и запустить
+\`test <url> <фича>\`
+Сгенерировать AI тест (получишь PDF) и запустить
 _Пример: test https://cabinet.nomad.kz/login поле иин_
 
-\`checklist <url> <feature>\`
+\`test list\`
+Список всех сгенерированных тестов с ID
+
+\`test run <TC\\-001>\`
+Запустить тест по ID
+_Пример: test run TC\\-001_
+
+\`checklist <url> <фича>\`
 Сгенерировать QA чеклист
 _Пример: checklist https://cabinet.nomad.kz/login поле иин_
 

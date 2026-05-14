@@ -2,11 +2,12 @@
 
 const MAX_TELEGRAM_MSG = 3800;
 
-function formatTestResult(output, success) {
+function formatTestResult(output, success, testId) {
   const icon = success ? '✅' : '❌';
   const label = success ? 'Тесты прошли' : 'Тесты упали';
+  const prefix = testId ? `${icon} ${testId} — ${label}` : `${icon} ${label}`;
   const lines = output.split('\n').slice(-20).join('\n');
-  return `${icon} ${label}\n\n${lines}`;
+  return `${prefix}\n\n${lines}`;
 }
 
 function splitIntoChunks(text, maxLen = MAX_TELEGRAM_MSG) {
