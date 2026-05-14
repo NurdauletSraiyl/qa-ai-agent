@@ -9,6 +9,35 @@ const { Progress } = require('../progress');
 const fs = require('fs-extra');
 const path = require('path');
 
+async function sendWithRetry(ctx, pdfPath, tsPath, testId, feature, fileName, attempts = 3) {
+  const safeName = `${testId}_${feature.replace(/\s+/g, '_')}`;
+
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await ctx.replyWithDocument(
+        { source: pdfPath, filename: `${safeName}.pdf` },
+        { caption: `📄 ${testId} — ${feature}\nФайл: ${fileName}` }
+      );
+      return;
+    } catch (err) {
+      const isLastAttempt = i === attempts;
+      if (isLastAttempt) {
+        // Fallback: send the .ts source file directly
+        try {
+          await ctx.replyWithDocument(
+            { source: tsPath, filename: `${safeName}.ts` },
+            { caption: `📄 ${testId} — ${feature}\n(отправлен .ts, PDF не удалось)` }
+          );
+        } catch {
+          await ctx.reply(`📄 ${testId} — тест сохранён: ${fileName}`);
+        }
+      } else {
+        await new Promise((r) => setTimeout(r, i * 2000));
+      }
+    }
+  }
+}
+
 async function handleTest(ctx, args) {
   if (args.length < 1) {
     return ctx.reply(
@@ -45,15 +74,12 @@ async function handleTest(ctx, args) {
       await fs.writeJson(path.join('tests', 'registry.json'), reg, { spaces: 2 });
     }
 
-    await progress.update('📄 Генерирую PDF');
+    await progress.update('📄 Отправляю файл');
     pdfPath = await generatePdf(`${testId}: ${feature}`, code);
 
     await progress.done(`✅ ${testId} — тест сгенерирован`);
 
-    await ctx.replyWithDocument(
-      { source: pdfPath, filename: `${testId}_${feature.replace(/\s+/g, '_')}.pdf` },
-      { caption: `📄 ${testId} — ${feature}\nФайл: ${fileName}` }
-    );
+    await sendWithRetry(ctx, pdfPath, filePath, testId, feature, fileName);
 
     const runProgress = await new Progress(ctx, `🚀 Запускаю ${testId}`).start();
 

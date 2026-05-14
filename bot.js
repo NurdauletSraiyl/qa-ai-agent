@@ -72,7 +72,13 @@ bot.on('text', async (ctx) => {
 });
 
 bot.catch((err, ctx) => {
-  console.error('[bot] unhandled error:', err.message);
+  const msg = err.message || '';
+  // Ignore network-level errors (socket hang up, ECONNRESET) — handlers have their own retry
+  if (msg.includes('socket hang up') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT')) {
+    console.warn('[bot] network error (ignored):', msg);
+    return;
+  }
+  console.error('[bot] unhandled error:', msg);
   ctx.reply('❌ Произошла неожиданная ошибка. Попробуй ещё раз.').catch(() => {});
 });
 
