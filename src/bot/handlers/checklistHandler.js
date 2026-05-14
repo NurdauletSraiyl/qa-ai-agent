@@ -25,9 +25,10 @@ async function handleChecklist(ctx, args) {
     return ctx.reply('⚠️ Укажи описание фичи после URL.');
   }
 
-  const progress = await new Progress(ctx, '🧠 AI генерирует QA чеклист').start();
+  let progress = null;
 
   try {
+    progress = await new Progress(ctx, '🧠 AI генерирует QA чеклист').start();
     const checklist = await generateChecklist(url, feature);
     await progress.done(`✅ Чеклист готов: ${feature}`);
 
@@ -35,7 +36,8 @@ async function handleChecklist(ctx, args) {
     for (const chunk of chunks) await ctx.reply(chunk);
   } catch (err) {
     console.error('[checklistHandler] error:', err.message);
-    await progress.fail(err.message);
+    if (progress) await progress.fail(err.message);
+    else await ctx.reply(`❌ ${err.message}`).catch(() => {});
   }
 }
 

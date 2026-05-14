@@ -56,10 +56,11 @@ async function handleTest(ctx, args) {
     return ctx.reply('⚠️ Некорректный URL. Должен начинаться с http:// или https://');
   }
 
-  const progress = await new Progress(ctx, '🧠 AI генерирует тест').start();
+  let progress = null;
   let pdfPath = null;
 
   try {
+    progress = await new Progress(ctx, '🧠 AI генерирует тест').start();
     const aiResponse = await generateTest(url, feature);
 
     await progress.update('💾 Сохраняю тест');
@@ -87,16 +88,22 @@ async function handleTest(ctx, args) {
     await runProgress.done(formatTestResult(output, success, testId));
 
     if (!success) {
-      const bugProgress = await new Progress(ctx, '🔍 AI анализирует причину падения').start();
-      const analysis = await investigateBug(output);
-      await bugProgress.done(`📊 Анализ ошибки ${testId}`);
-
-      const chunks = splitIntoChunks(analysis);
-      for (const chunk of chunks) await ctx.reply(chunk);
+      let bugProgress = null;
+      try {
+        bugProgress = await new Progress(ctx, '🔍 AI анализирует причину падения').start();
+        const analysis = await investigateBug(output);
+        await bugProgress.done(`📊 Анализ ошибки ${testId}`);
+        const chunks = splitIntoChunks(analysis);
+        for (const chunk of chunks) await ctx.reply(chunk);
+      } catch (bugErr) {
+        console.error('[testHandler] bug analysis error:', bugErr.message);
+        if (bugProgress) await bugProgress.fail(bugErr.message);
+      }
     }
   } catch (err) {
     console.error('[testHandler] error:', err.message);
-    await progress.fail(err.message);
+    if (progress) await progress.fail(err.message);
+    else await ctx.reply(`❌ ${err.message}`).catch(() => {});
   } finally {
     if (pdfPath) await fs.remove(pdfPath).catch(() => {});
   }
@@ -107,41 +114,49 @@ async function handleRunById(ctx, rawId) {
     return ctx.reply('Использование: `test run <TC-001>`', { parse_mode: 'Markdown' });
   }
   const id = rawId.toUpperCase();
-  const registry = await getRegistry();
-  const entry = registry[id];
 
-  if (!entry) {
-    return ctx.reply(`❌ Тест ${id} не найден. Используй \`test list\` для просмотра.`, {
-      parse_mode: 'Markdown',
-    });
-  }
-
-  const progress = await new Progress(ctx, `🚀 Запускаю ${id}: ${entry.feature}`).start();
-
+  let progress = null;
   try {
+    const registry = await getRegistry();
+    const entry = registry[id];
+
+    if (!entry) {
+      return ctx.reply(`❌ Тест ${id} не найден. Используй \`test list\` для просмотра.`, {
+        parse_mode: 'Markdown',
+      });
+    }
+
+    progress = await new Progress(ctx, `🚀 Запускаю ${id}: ${entry.feature}`).start();
     const { success, output } = await runTests(entry.file);
     await progress.done(formatTestResult(output, success, id));
   } catch (err) {
-    await progress.fail(err.message);
+    console.error('[handleRunById] error:', err.message);
+    if (progress) await progress.fail(err.message);
+    else await ctx.reply(`❌ ${err.message}`).catch(() => {});
   }
 }
 
 async function handleList(ctx) {
-  const registry = await getRegistry();
-  const entries = Object.values(registry);
+  try {
+    const registry = await getRegistry();
+    const entries = Object.values(registry);
 
-  if (!entries.length) {
-    return ctx.reply('📭 Тестов пока нет. Используй `test <url> <фича>` для генерации.', {
-      parse_mode: 'Markdown',
-    });
+    if (!entries.length) {
+      return ctx.reply('📭 Тестов пока нет. Используй `test <url> <фича>` для генерации.', {
+        parse_mode: 'Markdown',
+      });
+    }
+
+    const lines = entries.map(
+      (e) => `${e.id}  ${e.feature}${e.url ? '\n      ' + e.url : ''}`
+    );
+    const text = `📋 Список тестов (${entries.length}):\n\n` + lines.join('\n\n');
+    const chunks = splitIntoChunks(text);
+    for (const chunk of chunks) await ctx.reply(chunk);
+  } catch (err) {
+    console.error('[handleList] error:', err.message);
+    await ctx.reply(`❌ ${err.message}`).catch(() => {});
   }
-
-  const lines = entries.map(
-    (e) => `${e.id}  ${e.feature}${e.url ? '\n      ' + e.url : ''}`
-  );
-  const text = `📋 Список тестов (${entries.length}):\n\n` + lines.join('\n\n');
-  const chunks = splitIntoChunks(text);
-  for (const chunk of chunks) await ctx.reply(chunk);
 }
 
 module.exports = { handleTest };

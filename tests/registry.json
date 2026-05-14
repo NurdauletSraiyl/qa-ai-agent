@@ -5,5 +5,19 @@
     "url": "https://cabinet.nomad.kz/login",
     "file": "tests/ui/TC-001_test.spec.ts",
     "createdAt": "2026-05-14T08:03:35.975Z"
+  },
+  "TC-002": {
+    "id": "TC-002",
+    "feature": "поле иин",
+    "url": "https://cabinet.nomad.kz/login",
+    "file": "tests/ui/TC-002_test.spec.ts",
+    "createdAt": "2026-05-14T08:07:45.351Z"
+  },
+  "TC-003": {
+    "id": "TC-003",
+    "feature": "поле иин",
+    "url": "https://cabinet.nomad.kz/login",
+    "file": "tests/ui/TC-003_test.spec.ts",
+    "createdAt": "2026-05-14T08:11:23.091Z"
   }
 }

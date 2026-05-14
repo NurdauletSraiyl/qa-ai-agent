@@ -13,15 +13,22 @@ function getClient() {
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY не задан в .env файле');
     }
-    _anthropic = new Anthropic({ apiKey });
+    // timeout: 10 min — streaming prevents idle disconnects, but keep a hard ceiling
+    _anthropic = new Anthropic({ apiKey, timeout: 600_000 });
   }
   return _anthropic;
+}
+
+// Use streaming so long thinking sessions don't hit network idle timeouts
+async function streamMessage(params) {
+  const stream = await getClient().messages.stream(params);
+  return stream.finalMessage();
 }
 
 async function generateTest(url, feature) {
   const systemPrompt = await loadPrompt('qa-test-generator');
 
-  const response = await getClient().messages.create({
+  const response = await streamMessage({
     model: MODEL,
     max_tokens: 4096,
     thinking: { type: 'adaptive' },
@@ -46,7 +53,7 @@ async function generateTest(url, feature) {
 async function generateChecklist(url, feature) {
   const systemPrompt = await loadPrompt('qa-checklist');
 
-  const response = await getClient().messages.create({
+  const response = await streamMessage({
     model: MODEL,
     max_tokens: 4096,
     thinking: { type: 'adaptive' },
@@ -71,7 +78,7 @@ async function generateChecklist(url, feature) {
 async function investigateBug(failureLog) {
   const systemPrompt = await loadPrompt('bug-investigator');
 
-  const response = await getClient().messages.create({
+  const response = await streamMessage({
     model: MODEL,
     max_tokens: 2048,
     system: [
@@ -95,7 +102,7 @@ async function investigateBug(failureLog) {
 async function generateReport(testResults) {
   const systemPrompt = await loadPrompt('qa-reporter');
 
-  const response = await getClient().messages.create({
+  const response = await streamMessage({
     model: MODEL,
     max_tokens: 3000,
     system: [
