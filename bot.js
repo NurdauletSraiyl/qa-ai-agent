@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '.env'), override: true });
 
 const { Telegraf } = require('telegraf');
 const { authMiddleware } = require('./src/bot/middleware/auth');
