@@ -28,17 +28,28 @@ function extractCodeBlock(text) {
 }
 
 function sanitizeCode(code) {
-  return code
-    // Replace nullish coalescing with logical OR
+  const cleaned = code
     .replace(/\?\?/g, '||')
-    // Replace optional chaining in template literals: ${x?.y} → ${x && x.y}
     .replace(/\$\{(\w+)\?\.([\w.]+)\}/g, (_, obj, prop) => `\${${obj} ? ${obj}.${prop} : ''}`)
-    // Remove remaining optional chaining outside templates (e.g. foo?.bar → foo && foo.bar)
     .replace(/(\w+)\?\./g, '$1 && $1.')
-    // Strip leading markdown fence if present
     .replace(/^```[a-z]*\n?/, '')
     .replace(/\n?```$/, '')
     .trim();
+
+  return ensureBalanced(cleaned);
+}
+
+function ensureBalanced(code) {
+  let open = 0;
+  for (const ch of code) {
+    if (ch === '{') open++;
+    else if (ch === '}') open--;
+  }
+  // Append missing closing braces so Playwright can at least parse the file
+  if (open > 0) {
+    return code + '\n' + '});'.repeat(open);
+  }
+  return code;
 }
 
 async function saveTest(code, featureName, testId) {

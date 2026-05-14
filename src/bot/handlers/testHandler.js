@@ -100,15 +100,20 @@ async function handleTest(ctx, args) {
     if (!success) {
       let bugProgress = null;
       try {
+        console.log('[test] starting bug analysis...');
         bugProgress = await new Progress(ctx, '🔍 AI анализирует причину падения').start();
         const analysis = await investigateBug(output);
+        console.log('[test] bug analysis done, length:', analysis.length);
         await bugProgress.done(`📊 Анализ ошибки ${testId}`);
         const chunks = splitIntoChunks(analysis);
         for (const chunk of chunks) await ctx.reply(chunk);
+        console.log('[test] all done');
       } catch (bugErr) {
         console.error('[testHandler] bug analysis error:', bugErr.message);
         if (bugProgress) await bugProgress.fail(bugErr.message);
       }
+    } else {
+      console.log('[test] all done (tests passed)');
     }
   } catch (err) {
     console.error('[testHandler] CAUGHT ERROR:', err.message);
