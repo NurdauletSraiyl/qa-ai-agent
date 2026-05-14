@@ -1,11 +1,13 @@
 {
   "name": "qa-ai-agent",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "2.0.0",
+  "main": "bot.js",
   "scripts": {
+    "start": "node bot.js",
     "test": "playwright test",
     "test:ui": "playwright test tests/ui",
     "test:api": "playwright test tests/api",
+    "test:smoke": "playwright test --grep @smoke",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report"
   },
@@ -21,12 +23,14 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "dotenv": "^17.4.2",
     "fs-extra": "^11.3.5",
+    "pdfkit": "^0.18.0",
     "telegraf": "^4.16.3"
   },
   "directories": {
     "test": "tests"
   },
-  "description": ""
+  "description": "AI-driven QA automation platform with Telegram bot and Playwright"
 }

@@ -1,72 +1,102 @@
+'use strict';
+
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env'), override: true });
+
 const { Telegraf } = require('telegraf');
-const fs = require('fs-extra');
-const { exec } = require('child_process');
-require('dotenv').config();
+const { authMiddleware } = require('./src/bot/middleware/auth');
+const { rateLimitMiddleware } = require('./src/bot/middleware/rateLimit');
+const { handleTest, handleRegress } = require('./src/bot/handlers/testHandler');
+const { handleChecklist } = require('./src/bot/handlers/checklistHandler');
+const { handleInvestigate } = require('./src/bot/handlers/investigateHandler');
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
-
-// 🧠 simple generator
-function generatePlaywrightTest(url, feature) {
-  return `
-const { test, expect } = require('@playwright/test');
-
-test('${feature}', async ({ page }) => {
-  await page.goto('${url}');
-
-  const input = page.getByRole('textbox');
-
-  await expect(input).toBeVisible();
-
-  await input.fill('123456789012');
-
-  await expect(input).toHaveValue('123456789012');
+const bot = new Telegraf(process.env.BOT_TOKEN, {
+  handlerTimeout: 10 * 60 * 1000, // 10 minutes — AI gen + PDF upload + playwright
 });
-`;
-}
 
-async function saveTest(code, name) {
-  const path = `tests/ui/${name}.spec.ts`;
-  await fs.ensureDir('tests/ui');
-  await fs.writeFile(path, code);
-  return path;
-}
+const HELP_TEXT = `🤖 *QA AI Agent*
 
-function runTests() {
-  return new Promise((resolve) => {
-    exec('npx playwright test --reporter=list', (err, stdout) => {
-      if (err) return resolve(err.message);
-      resolve(stdout);
-    });
-  });
-}
+*Команды:*
+
+\`test <url> <фича>\`
+Сгенерировать AI тест (получишь PDF) и запустить
+_Пример: test https://cabinet.nomad.kz/login поле иин_
+
+\`test list\`
+Список всех сгенерированных тестов с ID
+
+\`test run <TC\\-001>\`
+Запустить тест по ID
+_Пример: test run TC\\-001_
+
+\`checklist <url> <фича>\`
+Сгенерировать QA чеклист
+_Пример: checklist https://cabinet.nomad.kz/login поле иин_
+
+\`test retry <TC\\-001>\`
+Перезапустить только упавшие тесты из прогона
+_Пример: test retry TC\\-001_
+
+\`regress\`
+Регресс\\-прогон всех тестов \\(последний TC на каждую фичу\\)
+_Пример: regress_
+_Пример: regress cabinet.nomad.kz_ \\(фильтр по URL\\)
+
+\`investigate <лог ошибки>\`
+Анализ причины падения теста
+
+\`help\`
+Показать это сообщение`;
+
+bot.use(authMiddleware);
+
+bot.start((ctx) => ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' }));
+bot.help((ctx) => ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' }));
 
 bot.on('text', async (ctx) => {
-  const text = ctx.message.text;
+  const text = ctx.message.text.trim();
 
-  if (!text.startsWith('test')) {
-    return ctx.reply('Use: test <url> <feature>');
+  if (text.startsWith('/')) return;
+
+  const [command, ...args] = text.split(/\s+/);
+
+  switch (command.toLowerCase()) {
+    case 'test':
+      return rateLimitMiddleware(ctx, () => handleTest(ctx, args));
+
+    case 'regress':
+      return rateLimitMiddleware(ctx, () => handleRegress(ctx, args));
+
+    case 'checklist':
+      return rateLimitMiddleware(ctx, () => handleChecklist(ctx, args));
+
+    case 'investigate':
+      return handleInvestigate(ctx, args);
+
+    case 'help':
+      return ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' });
+
+    default:
+      return ctx.reply(
+        '❓ Неизвестная команда. Напиши `help` для списка команд.',
+        { parse_mode: 'Markdown' }
+      );
   }
-
-  const parts = text.split(' ');
-  const url = parts[1];
-  const feature = parts.slice(2).join(' ') || 'auto test';
-
-  await ctx.reply('🧠 Generating test...');
-
-  const code = generatePlaywrightTest(url, feature);
-  const fileName = feature.replace(/\s+/g, '_');
-
-  const filePath = await saveTest(code, fileName);
-
-  await ctx.reply(`📁 Created: ${filePath}`);
-
-  await ctx.reply('🚀 Running tests...');
-
-  const result = await runTests();
-
-  await ctx.reply(`📊 Result:\n\n${result}`);
 });
 
-bot.launch();
+bot.catch((err, ctx) => {
+  const msg = err.message || '';
+  console.error('[bot.catch] error:', msg);
+  console.error('[bot.catch] stack:', err.stack);
+  if (msg.includes('socket hang up') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT')) {
+    console.warn('[bot.catch] network error (ignored):', msg);
+    return;
+  }
+  ctx.reply('❌ Произошла неожиданная ошибка. Попробуй ещё раз.').catch(() => {});
+});
 
-console.log('🤖 QA Bot running...');
+bot.launch({ dropPendingUpdates: true });
+console.log('🤖 QA AI Agent running...');
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
