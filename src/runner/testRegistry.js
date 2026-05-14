@@ -3,10 +3,11 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-const REGISTRY_PATH = path.join('tests', 'registry.json');
+const TESTS_DIR = process.env.TESTS_DIR || path.resolve(__dirname, '../../tests');
+const REGISTRY_PATH = path.join(TESTS_DIR, 'registry.json');
 
 async function loadRegistry() {
-  await fs.ensureDir('tests');
+  await fs.ensureDir(TESTS_DIR);
   if (!(await fs.pathExists(REGISTRY_PATH))) return {};
   return fs.readJson(REGISTRY_PATH);
 }

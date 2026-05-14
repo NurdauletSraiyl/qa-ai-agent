@@ -4,6 +4,8 @@ const { exec } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
 
+const TESTS_DIR = process.env.TESTS_DIR || path.resolve(__dirname, '../../tests');
+
 function sanitizeFileName(name) {
   return name
     .replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -55,8 +57,9 @@ function ensureBalanced(code) {
 async function saveTest(code, featureName, testId) {
   const safeName = sanitizeFileName(featureName);
   const fileName = `${testId}_${safeName}.spec.ts`;
-  const filePath = path.join('tests', 'ui', fileName);
-  await fs.ensureDir(path.join('tests', 'ui'));
+  const uiDir = path.join(TESTS_DIR, 'ui');
+  const filePath = path.join(uiDir, fileName);
+  await fs.ensureDir(uiDir);
   await fs.writeFile(filePath, code, 'utf-8');
   return { filePath, safeName, fileName };
 }

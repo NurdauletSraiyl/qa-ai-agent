@@ -81,7 +81,8 @@ async function handleTest(ctx, args) {
     const reg = await getRegistry();
     if (reg[testId]) {
       reg[testId].file = filePath;
-      await fs.writeJson(path.join('tests', 'registry.json'), reg, { spaces: 2 });
+      const testsDir = process.env.TESTS_DIR || path.join(__dirname, '../../../tests');
+      await fs.writeJson(path.join(testsDir, 'registry.json'), reg, { spaces: 2 });
     }
 
     await progress.update('📄 Отправляю файл');
