@@ -2,11 +2,7 @@
 
 const { generateChecklist } = require('../../ai/client');
 const { splitIntoChunks } = require('../../reporter/formatter');
-
-function startTyping(ctx) {
-  ctx.sendChatAction('typing').catch(() => {});
-  return setInterval(() => ctx.sendChatAction('typing').catch(() => {}), 4000);
-}
+const { Progress } = require('../progress');
 
 async function handleChecklist(ctx, args) {
   if (args.length < 1) {
@@ -29,22 +25,17 @@ async function handleChecklist(ctx, args) {
     return ctx.reply('⚠️ Укажи описание фичи после URL.');
   }
 
-  await ctx.reply('🧠 AI генерирует QA чеклист...');
-  const typingInterval = startTyping(ctx);
+  const progress = await new Progress(ctx, '🧠 AI генерирует QA чеклист').start();
 
   try {
     const checklist = await generateChecklist(url, feature);
-    clearInterval(typingInterval);
-    const header = `📋 QA Чеклист: ${feature}\n\n`;
-    const chunks = splitIntoChunks(header + checklist);
+    await progress.done(`✅ Чеклист готов: ${feature}`);
 
-    for (const chunk of chunks) {
-      await ctx.reply(chunk);
-    }
+    const chunks = splitIntoChunks(`📋 QA Чеклист: ${feature}\n\n${checklist}`);
+    for (const chunk of chunks) await ctx.reply(chunk);
   } catch (err) {
-    clearInterval(typingInterval);
     console.error('[checklistHandler] error:', err.message);
-    await ctx.reply(`❌ Ошибка: ${err.message}`);
+    await progress.fail(err.message);
   }
 }
 

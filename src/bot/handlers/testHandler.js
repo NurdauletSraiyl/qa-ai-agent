@@ -5,30 +5,20 @@ const { saveTest, runTests, validateUrl, extractCodeBlock } = require('../../run
 const { registerTest, getRegistry } = require('../../runner/testRegistry');
 const { formatTestResult, splitIntoChunks } = require('../../reporter/formatter');
 const { generatePdf } = require('../../reporter/pdfGenerator');
+const { Progress } = require('../progress');
 const fs = require('fs-extra');
-
-function startTyping(ctx) {
-  ctx.sendChatAction('typing').catch(() => {});
-  return setInterval(() => ctx.sendChatAction('typing').catch(() => {}), 4000);
-}
+const path = require('path');
 
 async function handleTest(ctx, args) {
-  if (args.length < 2) {
+  if (args.length < 1) {
     return ctx.reply(
       'Использование: `test <url> <описание фичи>`\n\nПример:\n`test https://cabinet.nomad.kz/login поле иин`',
       { parse_mode: 'Markdown' }
     );
   }
 
-  // Handle: test run <TC-ID>
-  if (args[0].toLowerCase() === 'run') {
-    return handleRunById(ctx, args[1]);
-  }
-
-  // Handle: test list
-  if (args[0].toLowerCase() === 'list') {
-    return handleList(ctx);
-  }
+  if (args[0].toLowerCase() === 'run') return handleRunById(ctx, args[1]);
+  if (args[0].toLowerCase() === 'list') return handleList(ctx);
 
   const [url, ...featureParts] = args;
   const feature = featureParts.join(' ');
@@ -37,64 +27,51 @@ async function handleTest(ctx, args) {
     return ctx.reply('⚠️ Некорректный URL. Должен начинаться с http:// или https://');
   }
 
-  let typingInterval = null;
+  const progress = await new Progress(ctx, '🧠 AI генерирует тест').start();
   let pdfPath = null;
 
   try {
-    await ctx.reply('🧠 AI генерирует Playwright тест...');
-    typingInterval = startTyping(ctx);
-
     const aiResponse = await generateTest(url, feature);
-    clearInterval(typingInterval);
-    typingInterval = null;
 
+    await progress.update('💾 Сохраняю тест');
     const code = extractCodeBlock(aiResponse);
-
-    // Register test and get ID before saving
     const testId = await registerTest(feature, url, '');
     const { filePath, fileName } = await saveTest(code, feature, testId);
 
     // Update registry with real file path
-    const { getRegistry: gr } = require('../../runner/testRegistry');
-    const reg = await gr();
+    const reg = await getRegistry();
     if (reg[testId]) {
       reg[testId].file = filePath;
-      const fs2 = require('fs-extra');
-      await fs2.writeJson(require('path').join('tests', 'registry.json'), reg, { spaces: 2 });
+      await fs.writeJson(path.join('tests', 'registry.json'), reg, { spaces: 2 });
     }
 
+    await progress.update('📄 Генерирую PDF');
     pdfPath = await generatePdf(`${testId}: ${feature}`, code);
+
+    await progress.done(`✅ ${testId} — тест сгенерирован`);
+
     await ctx.replyWithDocument(
       { source: pdfPath, filename: `${testId}_${feature.replace(/\s+/g, '_')}.pdf` },
       { caption: `📄 ${testId} — ${feature}\nФайл: ${fileName}` }
     );
 
-    await ctx.reply(`🚀 Запускаю тест ${testId}...`);
-    typingInterval = startTyping(ctx);
+    const runProgress = await new Progress(ctx, `🚀 Запускаю ${testId}`).start();
 
     const { success, output } = await runTests(filePath);
-    clearInterval(typingInterval);
-    typingInterval = null;
-
-    await ctx.reply(formatTestResult(output, success, testId));
+    await runProgress.done(formatTestResult(output, success, testId));
 
     if (!success) {
-      await ctx.reply('🔍 AI анализирует причину падения...');
-      typingInterval = startTyping(ctx);
+      const bugProgress = await new Progress(ctx, '🔍 AI анализирует причину падения').start();
       const analysis = await investigateBug(output);
-      clearInterval(typingInterval);
-      typingInterval = null;
+      await bugProgress.done(`📊 Анализ ошибки ${testId}`);
 
-      const chunks = splitIntoChunks(`📊 Анализ ошибки ${testId}\n\n${analysis}`);
-      for (const chunk of chunks) {
-        await ctx.reply(chunk);
-      }
+      const chunks = splitIntoChunks(analysis);
+      for (const chunk of chunks) await ctx.reply(chunk);
     }
   } catch (err) {
     console.error('[testHandler] error:', err.message);
-    await ctx.reply(`❌ Ошибка: ${err.message}`);
+    await progress.fail(err.message);
   } finally {
-    if (typingInterval) clearInterval(typingInterval);
     if (pdfPath) await fs.remove(pdfPath).catch(() => {});
   }
 }
@@ -113,16 +90,13 @@ async function handleRunById(ctx, rawId) {
     });
   }
 
-  await ctx.reply(`🚀 Запускаю ${id}: ${entry.feature}...`);
-  const typingInterval = startTyping(ctx);
+  const progress = await new Progress(ctx, `🚀 Запускаю ${id}: ${entry.feature}`).start();
 
   try {
     const { success, output } = await runTests(entry.file);
-    clearInterval(typingInterval);
-    await ctx.reply(formatTestResult(output, success, id));
+    await progress.done(formatTestResult(output, success, id));
   } catch (err) {
-    clearInterval(typingInterval);
-    await ctx.reply(`❌ Ошибка: ${err.message}`);
+    await progress.fail(err.message);
   }
 }
 
@@ -141,9 +115,7 @@ async function handleList(ctx) {
   );
   const text = `📋 Список тестов (${entries.length}):\n\n` + lines.join('\n\n');
   const chunks = splitIntoChunks(text);
-  for (const chunk of chunks) {
-    await ctx.reply(chunk);
-  }
+  for (const chunk of chunks) await ctx.reply(chunk);
 }
 
 module.exports = { handleTest };
