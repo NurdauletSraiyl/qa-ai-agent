@@ -4,45 +4,10 @@ const { generateTest, investigateBug } = require('../../ai/client');
 const { saveTest, runTests, validateUrl, extractCodeBlock } = require('../../runner/testRunner');
 const { registerTest, getRegistry } = require('../../runner/testRegistry');
 const { formatTestResult, splitIntoChunks } = require('../../reporter/formatter');
-const { generatePdf } = require('../../reporter/pdfGenerator');
 const { Progress } = require('../progress');
 const fs = require('fs-extra');
 const path = require('path');
 
-async function sendWithRetry(ctx, pdfPath, tsPath, testId, feature, fileName, attempts = 3) {
-  const safeName = `${testId}_${feature.replace(/\s+/g, '_')}`;
-
-  for (let i = 1; i <= attempts; i++) {
-    try {
-      console.log(`[send] attempt ${i}: sending PDF ${pdfPath}`);
-      await ctx.replyWithDocument(
-        { source: fs.createReadStream(pdfPath), filename: `${safeName}.pdf` },
-        { caption: `📄 ${testId} — ${feature}\nФайл: ${fileName}` }
-      );
-      console.log('[send] PDF sent successfully');
-      return true;
-    } catch (err) {
-      console.error(`[send] attempt ${i} failed:`, err.message);
-      const isLastAttempt = i === attempts;
-      if (isLastAttempt) {
-        try {
-          console.log('[send] fallback: sending .ts file');
-          await ctx.replyWithDocument(
-            { source: fs.createReadStream(tsPath), filename: `${safeName}.ts` },
-            { caption: `📄 ${testId} — ${feature}\n(PDF не удалось, отправлен .ts)` }
-          );
-          console.log('[send] .ts file sent');
-          return true;
-        } catch (err2) {
-          console.error('[send] .ts fallback failed:', err2.message);
-          return false;
-        }
-      } else {
-        await new Promise((r) => setTimeout(r, i * 2000));
-      }
-    }
-  }
-}
 
 async function handleTest(ctx, args) {
   if (args.length < 1) {
@@ -63,7 +28,6 @@ async function handleTest(ctx, args) {
   }
 
   let progress = null;
-  let pdfPath = null;
 
   try {
     console.log(`[test] start: feature="${feature}" url="${url}"`);
@@ -86,22 +50,13 @@ async function handleTest(ctx, args) {
       await fs.writeJson(path.join(testsDir, 'registry.json'), reg, { spaces: 2 });
     }
 
-    await progress.update('📄 Отправляю тест');
-    console.log('[test] generating PDF...');
-    pdfPath = await generatePdf(`${testId}: ${feature}`, code);
-    console.log('[test] PDF generated:', pdfPath);
-
     await progress.done(`✅ ${testId} — тест сгенерирован`);
 
-    console.log('[test] sending file...');
-    const sent = await sendWithRetry(ctx, pdfPath, filePath, testId, feature, fileName);
-    if (!sent) {
-      // File upload failed — send code as text chunks
-      console.log('[test] upload failed, sending as text');
-      const chunks = splitIntoChunks(`📄 ${testId} — ${feature}\n\n${code}`);
-      for (const chunk of chunks) await ctx.reply(chunk);
-    }
-    console.log('[test] file sent');
+    // Send code as text (file upload not reliable in this environment)
+    const header = `📄 ${testId} — ${feature}\nФайл: ${fileName}\n\n`;
+    const chunks = splitIntoChunks(header + code);
+    for (const chunk of chunks) await ctx.reply(chunk);
+    console.log('[test] code sent as text');
 
     const runProgress = await new Progress(ctx, `🚀 Запускаю ${testId}`).start();
 
@@ -133,9 +88,7 @@ async function handleTest(ctx, args) {
     console.error('[testHandler] stack:', err.stack);
     if (progress) await progress.fail(err.message);
     else await ctx.reply(`❌ ${err.message}`).catch(() => {});
-  } finally {
-    if (pdfPath) await fs.remove(pdfPath).catch(() => {});
-  }
+  } finally {}
 }
 
 async function handleRunById(ctx, rawId) {
