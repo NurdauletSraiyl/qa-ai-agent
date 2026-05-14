@@ -4,6 +4,7 @@ const { generateTest, investigateBug } = require('../../ai/client');
 const { saveTest, runTests, validateUrl, extractCodeBlock } = require('../../runner/testRunner');
 const { registerTest, getRegistry } = require('../../runner/testRegistry');
 const { formatTestResult, splitIntoChunks } = require('../../reporter/formatter');
+const { saveTestPdf, REPORTS_DIR } = require('../../reporter/pdfGenerator');
 const { Progress } = require('../progress');
 const fs = require('fs-extra');
 const path = require('path');
@@ -50,13 +51,18 @@ async function handleTest(ctx, args) {
       await fs.writeJson(path.join(testsDir, 'registry.json'), reg, { spaces: 2 });
     }
 
-    await progress.done(`✅ ${testId} — тест сгенерирован`);
+    // Save PDF report locally
+    const reg2 = await getRegistry();
+    const pdfPath = await saveTestPdf({
+      testId, feature, url,
+      fileName,
+      code,
+      createdAt: reg2[testId] ? reg2[testId].createdAt : new Date().toISOString(),
+    });
+    console.log('[test] PDF saved:', pdfPath);
 
-    // Send code as text (file upload not reliable in this environment)
-    const header = `📄 ${testId} — ${feature}\nФайл: ${fileName}\n\n`;
-    const chunks = splitIntoChunks(header + code);
-    for (const chunk of chunks) await ctx.reply(chunk);
-    console.log('[test] code sent as text');
+    await progress.done(`✅ ${testId} — тест сгенерирован`);
+    await ctx.reply(`📄 ${testId} | ${feature}\nФайл: ${fileName}\nPDF: ${pdfPath}`);
 
     const runProgress = await new Progress(ctx, `🚀 Запускаю ${testId}`).start();
 

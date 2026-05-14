@@ -42,7 +42,7 @@ async function generateTest(url, feature) {
     messages: [
       {
         role: 'user',
-        content: `Generate a Playwright TypeScript test for:\nURL: ${url}\nFeature: ${feature}\n\nCRITICAL REQUIREMENTS:\n- Self-contained single file — NO Page Object imports, NO external dependencies\n- Use only: import { test, expect } from '@playwright/test';\n- No nullish coalescing operator ?? — use || instead\n- No optional chaining ?. inside template literals — use explicit ternary\n- All logic inline inside the test file\n- Return ONLY the complete TypeScript code wrapped in a \`\`\`typescript block`,
+        content: `Generate a Playwright TypeScript test for:\nURL: ${url}\nFeature: ${feature}\n\nCRITICAL REQUIREMENTS:\n- Self-contained single file — NO Page Object imports, NO external dependencies\n- Use only: import { test, expect } from '@playwright/test';\n- No nullish coalescing operator ?? — use || instead\n- No optional chaining ?. inside template literals — use explicit ternary\n- All logic inline inside the test file\n- For masked/imask inputs use: await page.locator('input[name="iin"]').click({ force: true }) then page.keyboard.type()\n- Always wait for page load: await page.waitForLoadState('networkidle')\n- Use specific selectors (name, data-*, role) not generic 'input' or 'first()'\n- Return ONLY the complete TypeScript code wrapped in a \`\`\`typescript block`,
       },
     ],
   });
