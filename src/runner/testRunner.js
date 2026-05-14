@@ -56,10 +56,10 @@ function runTests(specFile) {
       : null;
 
     const cmd = safeSpec
-      ? `npx playwright test "${safeSpec}" --reporter=list`
-      : 'npx playwright test --reporter=list';
+      ? `npx playwright test "${safeSpec}" --project=chromium --timeout=20000 --reporter=list`
+      : 'npx playwright test --project=chromium --timeout=20000 --reporter=list';
 
-    exec(cmd, { timeout: 120_000, cwd: process.cwd() }, (err, stdout, stderr) => {
+    exec(cmd, { timeout: 60_000, cwd: process.cwd() }, (err, stdout, stderr) => {
       resolve({
         success: !err,
         output: (stdout || stderr || err?.message || 'No output').slice(0, 3000),

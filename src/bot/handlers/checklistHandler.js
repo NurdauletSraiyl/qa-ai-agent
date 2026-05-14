@@ -3,6 +3,11 @@
 const { generateChecklist } = require('../../ai/client');
 const { splitIntoChunks } = require('../../reporter/formatter');
 
+function startTyping(ctx) {
+  ctx.sendChatAction('typing').catch(() => {});
+  return setInterval(() => ctx.sendChatAction('typing').catch(() => {}), 4000);
+}
+
 async function handleChecklist(ctx, args) {
   if (args.length < 1) {
     return ctx.reply(
@@ -25,9 +30,11 @@ async function handleChecklist(ctx, args) {
   }
 
   await ctx.reply('🧠 AI генерирует QA чеклист...');
+  const typingInterval = startTyping(ctx);
 
   try {
     const checklist = await generateChecklist(url, feature);
+    clearInterval(typingInterval);
     const header = `📋 QA Чеклист: ${feature}\n\n`;
     const chunks = splitIntoChunks(header + checklist);
 
@@ -35,6 +42,7 @@ async function handleChecklist(ctx, args) {
       await ctx.reply(chunk);
     }
   } catch (err) {
+    clearInterval(typingInterval);
     console.error('[checklistHandler] error:', err.message);
     await ctx.reply(`❌ Ошибка: ${err.message}`);
   }

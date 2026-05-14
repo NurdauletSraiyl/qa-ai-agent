@@ -6,6 +6,11 @@ const { formatTestResult, splitIntoChunks } = require('../../reporter/formatter'
 const { generatePdf } = require('../../reporter/pdfGenerator');
 const fs = require('fs-extra');
 
+function startTyping(ctx) {
+  ctx.sendChatAction('typing').catch(() => {});
+  return setInterval(() => ctx.sendChatAction('typing').catch(() => {}), 4000);
+}
+
 async function handleTest(ctx, args) {
   if (args.length < 2) {
     return ctx.reply(
@@ -21,31 +26,42 @@ async function handleTest(ctx, args) {
     return ctx.reply('⚠️ Некорректный URL. Должен начинаться с http:// или https://');
   }
 
-  await ctx.reply('🧠 AI генерирует Playwright тест...');
-
+  let typingInterval = null;
   let pdfPath = null;
 
   try {
+    await ctx.reply('🧠 AI генерирует Playwright тест...');
+    typingInterval = startTyping(ctx);
+
     const aiResponse = await generateTest(url, feature);
+    clearInterval(typingInterval);
+    typingInterval = null;
+
     const code = extractCodeBlock(aiResponse);
     const { filePath } = await saveTest(code, feature);
 
-    // Send test code as PDF
     pdfPath = await generatePdf(`QA Test: ${feature}`, code);
     await ctx.replyWithDocument(
       { source: pdfPath, filename: `test_${feature.replace(/\s+/g, '_')}.pdf` },
-      { caption: `📄 Playwright тест: ${feature}` }
+      { caption: `📄 Playwright тест сгенерирован` }
     );
 
     await ctx.reply('🚀 Запускаю тест...');
+    typingInterval = startTyping(ctx);
 
     const { success, output } = await runTests(filePath);
-    const report = formatTestResult(output, success);
-    await ctx.reply(report);
+    clearInterval(typingInterval);
+    typingInterval = null;
+
+    await ctx.reply(formatTestResult(output, success));
 
     if (!success) {
       await ctx.reply('🔍 AI анализирует причину падения...');
+      typingInterval = startTyping(ctx);
       const analysis = await investigateBug(output);
+      clearInterval(typingInterval);
+      typingInterval = null;
+
       const chunks = splitIntoChunks(`📊 Анализ ошибки\n\n${analysis}`);
       for (const chunk of chunks) {
         await ctx.reply(chunk);
@@ -55,6 +71,7 @@ async function handleTest(ctx, args) {
     console.error('[testHandler] error:', err.message);
     await ctx.reply(`❌ Ошибка: ${err.message}`);
   } finally {
+    if (typingInterval) clearInterval(typingInterval);
     if (pdfPath) await fs.remove(pdfPath).catch(() => {});
   }
 }
