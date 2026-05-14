@@ -33,5 +33,12 @@
     "url": "https://cabinet.nomad.kz/login",
     "file": "tests/ui/TC-005_test.spec.ts",
     "createdAt": "2026-05-14T08:21:45.627Z"
+  },
+  "TC-006": {
+    "id": "TC-006",
+    "feature": "поле иин",
+    "url": "https://cabinet.nomad.kz/login",
+    "file": "tests/ui/TC-006_test.spec.ts",
+    "createdAt": "2026-05-14T10:38:58.490Z"
   }
 }

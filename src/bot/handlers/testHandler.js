@@ -14,22 +14,27 @@ async function sendWithRetry(ctx, pdfPath, tsPath, testId, feature, fileName, at
 
   for (let i = 1; i <= attempts; i++) {
     try {
+      console.log(`[send] attempt ${i}: sending PDF ${pdfPath}`);
       await ctx.replyWithDocument(
-        { source: pdfPath, filename: `${safeName}.pdf` },
+        { source: fs.createReadStream(pdfPath), filename: `${safeName}.pdf` },
         { caption: `📄 ${testId} — ${feature}\nФайл: ${fileName}` }
       );
+      console.log('[send] PDF sent successfully');
       return;
     } catch (err) {
+      console.error(`[send] attempt ${i} failed:`, err.message);
       const isLastAttempt = i === attempts;
       if (isLastAttempt) {
-        // Fallback: send the .ts source file directly
         try {
+          console.log('[send] fallback: sending .ts file');
           await ctx.replyWithDocument(
-            { source: tsPath, filename: `${safeName}.ts` },
-            { caption: `📄 ${testId} — ${feature}\n(отправлен .ts, PDF не удалось)` }
+            { source: fs.createReadStream(tsPath), filename: `${safeName}.ts` },
+            { caption: `📄 ${testId} — ${feature}\n(PDF не удалось, отправлен .ts)` }
           );
-        } catch {
-          await ctx.reply(`📄 ${testId} — тест сохранён: ${fileName}`);
+          console.log('[send] .ts file sent');
+        } catch (err2) {
+          console.error('[send] .ts fallback failed:', err2.message);
+          await ctx.reply(`📄 ${testId} — тест сохранён локально: ${fileName}`).catch(() => {});
         }
       } else {
         await new Promise((r) => setTimeout(r, i * 2000));
