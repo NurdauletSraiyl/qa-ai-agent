@@ -23,7 +23,22 @@ function validateUrl(url) {
 
 function extractCodeBlock(text) {
   const match = text.match(/```(?:typescript|javascript|ts|js)?\n([\s\S]*?)```/);
-  return match ? match[1].trim() : text.trim();
+  const raw = match ? match[1].trim() : text.trim();
+  return sanitizeCode(raw);
+}
+
+function sanitizeCode(code) {
+  return code
+    // Replace nullish coalescing with logical OR
+    .replace(/\?\?/g, '||')
+    // Replace optional chaining in template literals: ${x?.y} → ${x && x.y}
+    .replace(/\$\{(\w+)\?\.([\w.]+)\}/g, (_, obj, prop) => `\${${obj} ? ${obj}.${prop} : ''}`)
+    // Remove remaining optional chaining outside templates (e.g. foo?.bar → foo && foo.bar)
+    .replace(/(\w+)\?\./g, '$1 && $1.')
+    // Strip leading markdown fence if present
+    .replace(/^```[a-z]*\n?/, '')
+    .replace(/\n?```$/, '')
+    .trim();
 }
 
 async function saveTest(code, featureName) {

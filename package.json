@@ -26,6 +26,7 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "dotenv": "^17.4.2",
     "fs-extra": "^11.3.5",
+    "pdfkit": "^0.18.0",
     "telegraf": "^4.16.3"
   },
   "directories": {

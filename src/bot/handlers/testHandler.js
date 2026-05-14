@@ -3,6 +3,8 @@
 const { generateTest, investigateBug } = require('../../ai/client');
 const { saveTest, runTests, validateUrl, extractCodeBlock } = require('../../runner/testRunner');
 const { formatTestResult, splitIntoChunks } = require('../../reporter/formatter');
+const { generatePdf } = require('../../reporter/pdfGenerator');
+const fs = require('fs-extra');
 
 async function handleTest(ctx, args) {
   if (args.length < 2) {
@@ -19,19 +21,26 @@ async function handleTest(ctx, args) {
     return ctx.reply('⚠️ Некорректный URL. Должен начинаться с http:// или https://');
   }
 
-  const statusMsg = await ctx.reply('🧠 AI генерирует Playwright тест...');
+  await ctx.reply('🧠 AI генерирует Playwright тест...');
+
+  let pdfPath = null;
 
   try {
     const aiResponse = await generateTest(url, feature);
     const code = extractCodeBlock(aiResponse);
     const { filePath } = await saveTest(code, feature);
 
-    await ctx.reply(`📁 Тест создан: \`${filePath}\``, { parse_mode: 'Markdown' });
+    // Send test code as PDF
+    pdfPath = await generatePdf(`QA Test: ${feature}`, code);
+    await ctx.replyWithDocument(
+      { source: pdfPath, filename: `test_${feature.replace(/\s+/g, '_')}.pdf` },
+      { caption: `📄 Playwright тест: ${feature}` }
+    );
+
     await ctx.reply('🚀 Запускаю тест...');
 
     const { success, output } = await runTests(filePath);
     const report = formatTestResult(output, success);
-
     await ctx.reply(report);
 
     if (!success) {
@@ -45,6 +54,8 @@ async function handleTest(ctx, args) {
   } catch (err) {
     console.error('[testHandler] error:', err.message);
     await ctx.reply(`❌ Ошибка: ${err.message}`);
+  } finally {
+    if (pdfPath) await fs.remove(pdfPath).catch(() => {});
   }
 }
 
