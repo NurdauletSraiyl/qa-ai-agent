@@ -2,12 +2,16 @@
 
 const MAX_TELEGRAM_MSG = 3800;
 
-function formatTestResult(output, success, testId) {
+function formatTestResult(output, success, testId, feature) {
   const icon = success ? '✅' : '❌';
-  const label = success ? 'Тесты прошли' : 'Тесты упали';
-  const prefix = testId ? `${icon} ${testId} — ${label}` : `${icon} ${label}`;
+  const status = success ? 'Тесты прошли' : 'Тесты упали';
+  const parts = [icon];
+  if (testId) parts.push(testId);
+  if (feature) parts.push(feature);
+  parts.push(status);
+  const header = parts.join(' | ');
   const lines = output.split('\n').slice(-20).join('\n');
-  return `${prefix}\n\n${lines}`;
+  return `${header}\n\n${lines}`;
 }
 
 function splitIntoChunks(text, maxLen = MAX_TELEGRAM_MSG) {

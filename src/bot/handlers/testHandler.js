@@ -63,7 +63,7 @@ async function handleTest(ctx, args) {
     console.log('[test] running playwright...');
     const { success, output } = await runTests(filePath);
     console.log(`[test] playwright done: success=${success}, output length=${output.length}`);
-    await runProgress.done(formatTestResult(output, success, testId));
+    await runProgress.done(formatTestResult(output, success, testId, feature));
 
     if (!success) {
       let bugProgress = null;
@@ -110,7 +110,7 @@ async function handleRunById(ctx, rawId) {
 
     progress = await new Progress(ctx, `🚀 Запускаю ${id}: ${entry.feature}`).start();
     const { success, output } = await runTests(entry.file);
-    await progress.done(formatTestResult(output, success, id));
+    await progress.done(formatTestResult(output, success, id, entry.feature));
   } catch (err) {
     console.error('[handleRunById] error:', err.message);
     if (progress) await progress.fail(err.message);
