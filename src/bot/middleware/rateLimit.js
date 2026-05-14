@@ -1,0 +1,21 @@
+'use strict';
+
+const COOLDOWN_MS = 30_000;
+const lastRequest = new Map();
+
+function rateLimitMiddleware(ctx, next) {
+  const userId = ctx.from?.id;
+  const now = Date.now();
+  const last = lastRequest.get(userId) || 0;
+  const elapsed = now - last;
+
+  if (elapsed < COOLDOWN_MS) {
+    const remaining = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+    return ctx.reply(`⏳ Please wait ${remaining}s before next request.`);
+  }
+
+  lastRequest.set(userId, now);
+  return next();
+}
+
+module.exports = { rateLimitMiddleware };

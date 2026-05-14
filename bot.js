@@ -1,72 +1,75 @@
-const { Telegraf } = require('telegraf');
-const fs = require('fs-extra');
-const { exec } = require('child_process');
+'use strict';
+
 require('dotenv').config();
+
+const { Telegraf } = require('telegraf');
+const { authMiddleware } = require('./src/bot/middleware/auth');
+const { rateLimitMiddleware } = require('./src/bot/middleware/rateLimit');
+const { handleTest } = require('./src/bot/handlers/testHandler');
+const { handleChecklist } = require('./src/bot/handlers/checklistHandler');
+const { handleInvestigate } = require('./src/bot/handlers/investigateHandler');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// 🧠 simple generator
-function generatePlaywrightTest(url, feature) {
-  return `
-const { test, expect } = require('@playwright/test');
+const HELP_TEXT = `🤖 *QA AI Agent*
 
-test('${feature}', async ({ page }) => {
-  await page.goto('${url}');
+*Commands:*
 
-  const input = page.getByRole('textbox');
+\`test <url> <feature>\`
+Generate AI test & run it
+_Example: test https://site.com login form_
 
-  await expect(input).toBeVisible();
+\`checklist <url> <feature>\`
+Generate deep QA checklist
+_Example: checklist https://site.com iin field_
 
-  await input.fill('123456789012');
+\`investigate <error log>\`
+AI root cause analysis
+_Example: investigate TimeoutError: locator not found_
 
-  await expect(input).toHaveValue('123456789012');
-});
-`;
-}
+\`help\`
+Show this message`;
 
-async function saveTest(code, name) {
-  const path = `tests/ui/${name}.spec.ts`;
-  await fs.ensureDir('tests/ui');
-  await fs.writeFile(path, code);
-  return path;
-}
+bot.use(authMiddleware);
 
-function runTests() {
-  return new Promise((resolve) => {
-    exec('npx playwright test --reporter=list', (err, stdout) => {
-      if (err) return resolve(err.message);
-      resolve(stdout);
-    });
-  });
-}
+bot.start((ctx) => ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' }));
+bot.help((ctx) => ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' }));
 
 bot.on('text', async (ctx) => {
-  const text = ctx.message.text;
+  const text = ctx.message.text.trim();
 
-  if (!text.startsWith('test')) {
-    return ctx.reply('Use: test <url> <feature>');
+  if (text.startsWith('/')) return;
+
+  const [command, ...args] = text.split(/\s+/);
+
+  switch (command.toLowerCase()) {
+    case 'test':
+      return rateLimitMiddleware(ctx, () => handleTest(ctx, args));
+
+    case 'checklist':
+      return rateLimitMiddleware(ctx, () => handleChecklist(ctx, args));
+
+    case 'investigate':
+      return handleInvestigate(ctx, args);
+
+    case 'help':
+      return ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' });
+
+    default:
+      return ctx.reply(
+        '❓ Unknown command. Type `help` for available commands.',
+        { parse_mode: 'Markdown' }
+      );
   }
-
-  const parts = text.split(' ');
-  const url = parts[1];
-  const feature = parts.slice(2).join(' ') || 'auto test';
-
-  await ctx.reply('🧠 Generating test...');
-
-  const code = generatePlaywrightTest(url, feature);
-  const fileName = feature.replace(/\s+/g, '_');
-
-  const filePath = await saveTest(code, fileName);
-
-  await ctx.reply(`📁 Created: ${filePath}`);
-
-  await ctx.reply('🚀 Running tests...');
-
-  const result = await runTests();
-
-  await ctx.reply(`📊 Result:\n\n${result}`);
 });
 
-bot.launch();
+bot.catch((err, ctx) => {
+  console.error('[bot] unhandled error:', err.message);
+  ctx.reply('❌ An unexpected error occurred. Please try again.').catch(() => {});
+});
 
-console.log('🤖 QA Bot running...');
+bot.launch({ dropPendingUpdates: true });
+console.log('🤖 QA AI Agent running...');
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));

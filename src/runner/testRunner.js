@@ -1,0 +1,56 @@
+'use strict';
+
+const { exec } = require('child_process');
+const fs = require('fs-extra');
+const path = require('path');
+
+function sanitizeFileName(name) {
+  return name
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 80) || 'test';
+}
+
+function validateUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function extractCodeBlock(text) {
+  const match = text.match(/```(?:typescript|javascript|ts|js)?\n([\s\S]*?)```/);
+  return match ? match[1].trim() : text.trim();
+}
+
+async function saveTest(code, featureName) {
+  const safeName = sanitizeFileName(featureName);
+  const filePath = path.join('tests', 'ui', `${safeName}.spec.ts`);
+  await fs.ensureDir(path.join('tests', 'ui'));
+  await fs.writeFile(filePath, code, 'utf-8');
+  return { filePath, safeName };
+}
+
+function runTests(specFile) {
+  return new Promise((resolve) => {
+    const safeSpec = specFile
+      ? path.normalize(specFile).replace(/\.\./g, '')
+      : null;
+
+    const cmd = safeSpec
+      ? `npx playwright test "${safeSpec}" --reporter=list`
+      : 'npx playwright test --reporter=list';
+
+    exec(cmd, { timeout: 120_000, cwd: process.cwd() }, (err, stdout, stderr) => {
+      resolve({
+        success: !err,
+        output: (stdout || stderr || err?.message || 'No output').slice(0, 3000),
+      });
+    });
+  });
+}
+
+module.exports = { saveTest, runTests, validateUrl, extractCodeBlock, sanitizeFileName };
