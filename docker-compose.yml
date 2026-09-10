@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  qa-bot:
+    build: .
+    image: qa-ai-agent:latest
+    container_name: qa-bot
+    restart: unless-stopped          # автоперезапуск при сбое или перезагрузке сервера
+
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ALLOWED_USERS=${ALLOWED_USERS}
+      - NODE_ENV=production
+
+    volumes:
+      # Персистентные данные — сохраняются между перезапусками контейнера
+      - ./tests:/app/tests
+      - ./reports:/app/reports
+      - ./test-results:/app/test-results
+
+    # Chromium требует эти флаги внутри Docker
+    security_opt:
+      - seccomp:unconfined
+    shm_size: '256mb'                # предотвращает краш Chromium на больших страницах
+
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+    healthcheck:
+      test: ['CMD', 'node', '-e', 'require("./bot.js")']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

@@ -1,0 +1,10 @@
+.env
+.git
+.gitignore
+.claude
+node_modules
+npm-debug.log*
+playwright-report
+test-results
+*.log
+.DS_Store

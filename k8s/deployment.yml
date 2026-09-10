@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qa-bot
+  namespace: qa
+  labels:
+    app: qa-bot
+spec:
+  replicas: 1             # ВАЖНО: только 1 — Telegram polling не работает на нескольких инстансах
+  selector:
+    matchLabels:
+      app: qa-bot
+  strategy:
+    type: Recreate        # не RollingUpdate — избежать двух подов одновременно
+  template:
+    metadata:
+      labels:
+        app: qa-bot
+    spec:
+      containers:
+        - name: qa-bot
+          image: your-registry/qa-ai-agent:latest   # замени на свой registry
+          imagePullPolicy: Always
+
+          envFrom:
+            - secretRef:
+                name: qa-bot-secret
+
+          env:
+            - name: NODE_ENV
+              value: production
+            # Если тестируешь приложение внутри кластера — укажи его internal DNS
+            - name: BASE_URL
+              value: "http://your-app-service.your-namespace.svc.cluster.local"
+
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "3Gi"     # Chromium может есть ~800MB на инстанс
+
+          volumeMounts:
+            - name: qa-data
+              mountPath: /app/tests
+              subPath: tests
+            - name: qa-data
+              mountPath: /app/reports
+              subPath: reports
+            - name: qa-data
+              mountPath: /app/test-results
+              subPath: test-results
+
+          # Chromium требует /dev/shm минимум 256MB
+          - name: dshm
+            mountPath: /dev/shm
+
+          livenessProbe:
+            exec:
+              command: ["node", "-e", "process.exit(0)"]
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+
+      volumes:
+        - name: qa-data
+          persistentVolumeClaim:
+            claimName: qa-bot-data
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+
+      # Chromium внутри K8s требует ослабленных seccomp ограничений
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        seccompProfile:
+          type: Unconfined
