@@ -31,7 +31,7 @@ services:
         max-file: '3'
 
     healthcheck:
-      test: ['CMD', 'node', '-e', 'require("./bot.js")']
+      test: ['CMD-SHELL', "pidof node || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

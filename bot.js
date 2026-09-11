@@ -105,8 +105,12 @@ bot.catch((err, ctx) => {
   ctx.reply('❌ Произошла неожиданная ошибка. Попробуй ещё раз.').catch(() => {});
 });
 
-bot.launch({ dropPendingUpdates: true });
-console.log('🤖 QA AI Agent running...');
+if (require.main === module) {
+  bot.launch({ dropPendingUpdates: true });
+  console.log('🤖 QA AI Agent running...');
+};
+
+module.exports = bot;
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
