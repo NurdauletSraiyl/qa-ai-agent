@@ -9,6 +9,7 @@ const { rateLimitMiddleware } = require('./src/bot/middleware/rateLimit');
 const { handleTest, handleRegress } = require('./src/bot/handlers/testHandler');
 const { handleChecklist } = require('./src/bot/handlers/checklistHandler');
 const { handleInvestigate } = require('./src/bot/handlers/investigateHandler');
+const { handlePolicy } = require('./src/bot/handlers/policyHandler');
 
 const bot = new Telegraf(process.env.BOT_TOKEN, {
   handlerTimeout: 10 * 60 * 1000, // 10 minutes — AI gen + PDF upload + playwright
@@ -45,6 +46,12 @@ _Пример: regress cabinet.nomad.kz_ \\(фильтр по URL\\)
 \`investigate <лог ошибки>\`
 Анализ причины падения теста
 
+\`policy <ns\\|ogpo\\|mst> <иин\\|номер\\|list>\`
+Получить уже выписанные полисы через API NDP
+_Пример: policy ns list_
+_Пример: policy ns 820921300652_
+_Пример: policy ns NS\\-2025\\-000099_
+
 \`help\`
 Показать это сообщение`;
 
@@ -72,6 +79,9 @@ bot.on('text', async (ctx) => {
 
     case 'investigate':
       return handleInvestigate(ctx, args);
+
+    case 'policy':
+      return rateLimitMiddleware(ctx, () => handlePolicy(ctx, args));
 
     case 'help':
       return ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' });
