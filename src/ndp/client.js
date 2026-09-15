@@ -78,8 +78,14 @@ async function createNsPolicy(payload) {
   return data;
 }
 
+async function createMstPolicy(payload) {
+  const { data } = await apiRequest('POST', '/v1/ui/policy/v1/mst/policies', payload);
+  return data;
+}
+
 module.exports = {
   getToken,
   apiRequest,
   createNsPolicy,
+  createMstPolicy,
 };

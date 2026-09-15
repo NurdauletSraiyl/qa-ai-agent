@@ -1,11 +1,12 @@
 'use strict';
 
-const { createNsPolicy } = require('../../ndp/client');
+const { createNsPolicy, createMstPolicy } = require('../../ndp/client');
 
 // User-facing product key -> API call that creates that product's policy.
-const CREATE_FN = { ns: createNsPolicy };
+const CREATE_FN = { ns: createNsPolicy, mst: createMstPolicy };
 
-const EXAMPLE = `issue ns
+const EXAMPLES = {
+  ns: `issue ns
 {
   "city": "Almaty",
   "contract_type": "adult",
@@ -43,13 +44,68 @@ const EXAMPLE = `issue ns
   "staff_id": "4",
   "start_at": "2026-09-16",
   "variant": "standard"
-}`;
+}`,
+  mst: `issue mst
+{
+  "draft_id": "dbcfe9da-55b3-47e3-a5cd-ce3b0ea6b262",
+  "variant": "standard",
+  "active_relax": false,
+  "city": "Almaty",
+  "country_codes": ["AUT"],
+  "covid_19": 0,
+  "delivery_method": "none",
+  "end_at": "2026-09-23",
+  "insureds": [
+    {
+      "active_relax": false,
+      "born_date": "1982-09-21",
+      "citizenship": "KAZ",
+      "covid_19": 0,
+      "economic_activity_type": "18",
+      "economic_sector_code": "9",
+      "esbd_client_id": 12182774,
+      "full_name_latin": "USHURBAKIYEV KADYR",
+      "gender": "male",
+      "iin": "820921300652",
+      "is_pdl": false,
+      "passport_issued_by": "МЮ РК",
+      "passport_issued_date": "2019-02-25",
+      "passport_number": "N12234278",
+      "purpose": "tourism",
+      "residency": "KAZ",
+      "resident": true
+    }
+  ],
+  "insureds_count": 1,
+  "is_pdl": false,
+  "payment_method": "cash",
+  "policyholder": {
+    "address": "КАЗАХСТАН, АЛМАТЫ, АЛАТАУСКИЙ, МИКРОРАЙОН Акбулак, УЛИЦА Байконурова, 83",
+    "economic_activity_type": "18",
+    "economic_sector_code": "9",
+    "esbd_client_id": 12182774,
+    "full_name": "УШУРБАКИЕВ КАДЫР АБДУХАЛИЛОВИЧ",
+    "identifier": "820921300652",
+    "is_public_official": false,
+    "residency": "KAZ",
+    "resident": true,
+    "type": "person"
+  },
+  "purpose": "tourism",
+  "staff_id": "4",
+  "start_at": "2026-09-17",
+  "sum_insured": 1,
+  "tariff": "base"
+}`,
+};
 
-function usage(extra) {
+function usage(extra, productKey) {
+  const example = EXAMPLES[productKey]
+    || Object.values(EXAMPLES).join('\n\n');
   return (
     (extra ? `${extra}\n\n` : '') +
-    'Использование: `issue <ns>`, затем на следующих строках — JSON тела запроса.\n\n' +
-    `Пример:\n\`\`\`\n${EXAMPLE}\n\`\`\``
+    `Использование: \`issue <${Object.keys(EXAMPLES).join('|')}>\`, затем на следующих строках — JSON тела запроса.\n\n` +
+    `Пример${EXAMPLES[productKey] ? '' : 'ы'}:\n\`\`\`\n${example}\n\`\`\``
   );
 }
 
@@ -69,7 +125,7 @@ async function handleIssue(ctx, text) {
 
   const jsonText = (match[2] || '').trim();
   if (!jsonText) {
-    return ctx.reply(usage(), { parse_mode: 'Markdown' });
+    return ctx.reply(usage(null, productKey), { parse_mode: 'Markdown' });
   }
 
   let payload;
