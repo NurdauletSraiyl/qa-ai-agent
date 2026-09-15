@@ -88,10 +88,16 @@ async function createMstPremiumPolicy(payload) {
   return data;
 }
 
+async function createOgpoVtsPolicy(payload) {
+  const { data } = await apiRequest('POST', '/v1/ui/policy/v1/ogpo-vts/policies', payload);
+  return data;
+}
+
 module.exports = {
   getToken,
   apiRequest,
   createNsPolicy,
   createMstPolicy,
   createMstPremiumPolicy,
+  createOgpoVtsPolicy,
 };

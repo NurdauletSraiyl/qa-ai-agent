@@ -1,9 +1,19 @@
 'use strict';
 
-const { createNsPolicy, createMstPolicy, createMstPremiumPolicy } = require('../../ndp/client');
+const {
+  createNsPolicy,
+  createMstPolicy,
+  createMstPremiumPolicy,
+  createOgpoVtsPolicy,
+} = require('../../ndp/client');
 
 // User-facing product key -> API call that creates that product's policy.
-const CREATE_FN = { ns: createNsPolicy, mst: createMstPolicy, 'mst-premium': createMstPremiumPolicy };
+const CREATE_FN = {
+  ns: createNsPolicy,
+  mst: createMstPolicy,
+  'mst-premium': createMstPremiumPolicy,
+  'ogpo-vts': createOgpoVtsPolicy,
+};
 
 const EXAMPLES = {
   ns: `issue ns
@@ -146,6 +156,59 @@ const EXAMPLES = {
   "start_at": "2026-09-24",
   "sum_insured": 4,
   "tariff": "base"
+}`,
+  'ogpo-vts': `issue ogpo-vts
+{
+  "policyholder_esbd_id": 33219139,
+  "driver_esbd_ids": [33219139],
+  "age_experience_ids": [4],
+  "drivers": [
+    {
+      "last_name": "KASYMOV",
+      "first_name": "ABDULLA",
+      "born": "1978-04-22",
+      "gender": "male",
+      "document_type": "int_passport",
+      "document_number": "A2301501",
+      "document_date": "2023-11-06",
+      "is_driver": true,
+      "is_policyholder": true,
+      "is_privileged": false,
+      "country_id": 183,
+      "age_experience_id": 4,
+      "driver_license_number": "1662767",
+      "driver_license_type_id": 3,
+      "driver_license_date": "2022-11-25"
+    }
+  ],
+  "vehicle_esbd_id": 12716006,
+  "vehicle_found": true,
+  "vehicle": {
+    "id": 12716006,
+    "reg_num": "3573AGI",
+    "reg_cert_num": "4090060",
+    "reg_cert_country_id": 183,
+    "reg_cert_file_uuid": "",
+    "born": "2020",
+    "mark": "DAF",
+    "model": "XF 480",
+    "vin": "XLRTEH4300G233009",
+    "type_id": 6,
+    "born_month": 12,
+    "color": "AK",
+    "model_id": 1229860,
+    "mark_id": 315658,
+    "found_by_search": true,
+    "reg_cert_date": "2018-09-13",
+    "right_hand_drive_bool": 0,
+    "n_places": 0
+  },
+  "quote_id": "68f93ed5-33ac-4345-9afb-6702fcf1aa16",
+  "total_premium": 15830,
+  "start_at": "2026-09-16",
+  "end_at": "2026-09-30",
+  "payment_method": "cash",
+  "delivery_method": "none"
 }`,
 };
 

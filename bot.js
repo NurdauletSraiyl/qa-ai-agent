@@ -46,11 +46,12 @@ _Пример: regress cabinet.nomad.kz_ \\(фильтр по URL\\)
 \`investigate <лог ошибки>\`
 Анализ причины падения теста
 
-\`issue <ns\\|mst\\|mst\\-premium>\`
+\`issue <ns\\|mst\\|mst\\-premium\\|ogpo\\-vts>\`
 Выписать полис через API NDP \\(JSON тела запроса — следующими строками\\)
 _Пример: issue ns_ \\(без JSON покажет образец payload'а\\)
 _Пример: issue mst_ \\(без JSON покажет образец payload'а\\)
 _Пример: issue mst\\-premium_ \\(без JSON покажет образец payload'а\\)
+_Пример: issue ogpo\\-vts_ \\(без JSON покажет образец payload'а\\)
 
 \`help\`
 Показать это сообщение`;
