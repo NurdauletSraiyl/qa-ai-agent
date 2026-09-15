@@ -12,6 +12,8 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - ALLOWED_USERS=${ALLOWED_USERS}
       - NODE_ENV=production
+      - MYNDP_LOGIN=${MYNDP_LOGIN}
+      - MYNDP_PASSWORD=${MYNDP_PASSWORD}
 
     volumes:
       # Персистентные данные — сохраняются между перезапусками контейнера
