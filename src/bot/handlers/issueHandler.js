@@ -1,9 +1,9 @@
 'use strict';
 
-const { createNsPolicy, createMstPolicy } = require('../../ndp/client');
+const { createNsPolicy, createMstPolicy, createMstPremiumPolicy } = require('../../ndp/client');
 
 // User-facing product key -> API call that creates that product's policy.
-const CREATE_FN = { ns: createNsPolicy, mst: createMstPolicy };
+const CREATE_FN = { ns: createNsPolicy, mst: createMstPolicy, 'mst-premium': createMstPremiumPolicy };
 
 const EXAMPLES = {
   ns: `issue ns
@@ -95,6 +95,56 @@ const EXAMPLES = {
   "staff_id": "4",
   "start_at": "2026-09-17",
   "sum_insured": 1,
+  "tariff": "base"
+}`,
+  'mst-premium': `issue mst-premium
+{
+  "draft_id": "636b2889-2f4f-4dc7-b42a-3608956a64a6",
+  "variant": "premium",
+  "active_relax": false,
+  "city": "Almaty",
+  "country_codes": ["AZE"],
+  "delivery_method": "none",
+  "end_at": "2026-09-30",
+  "insureds": [
+    {
+      "iin": "820921300652",
+      "full_name_latin": "USHURBAKIYEV KADYR",
+      "born_date": "1982-09-21",
+      "active_relax": false,
+      "citizenship": "KAZ",
+      "economic_activity_type": "18",
+      "economic_sector_code": "9",
+      "esbd_client_id": 12182774,
+      "gender": "male",
+      "is_pdl": false,
+      "passport_issued_by": "МЮ РК",
+      "passport_issued_date": "2019-02-25",
+      "passport_number": "N12234278",
+      "purpose": "tourism",
+      "residency": "KAZ",
+      "resident": true
+    }
+  ],
+  "insureds_count": 1,
+  "is_pdl": false,
+  "payment_method": "cash",
+  "policyholder": {
+    "address": "КАЗАХСТАН, АЛМАТЫ, АЛАТАУСКИЙ, МИКРОРАЙОН Акбулак, УЛИЦА Байконурова, 83",
+    "economic_activity_type": "18",
+    "economic_sector_code": "9",
+    "esbd_client_id": 12182774,
+    "full_name": "УШУРБАКИЕВ КАДЫР АБДУХАЛИЛОВИЧ",
+    "identifier": "820921300652",
+    "is_public_official": false,
+    "residency": "KAZ",
+    "resident": true,
+    "type": "person"
+  },
+  "purpose": "tourism",
+  "staff_id": "4",
+  "start_at": "2026-09-24",
+  "sum_insured": 4,
   "tariff": "base"
 }`,
 };

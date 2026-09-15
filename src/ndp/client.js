@@ -83,9 +83,15 @@ async function createMstPolicy(payload) {
   return data;
 }
 
+async function createMstPremiumPolicy(payload) {
+  const { data } = await apiRequest('POST', '/v1/ui/policy/v1/mst/policies?variant=premium', payload);
+  return data;
+}
+
 module.exports = {
   getToken,
   apiRequest,
   createNsPolicy,
   createMstPolicy,
+  createMstPremiumPolicy,
 };
