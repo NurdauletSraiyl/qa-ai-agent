@@ -37,20 +37,22 @@ ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Copy deps from stage 1
-COPY --from=deps /app/node_modules ./node_modules
+# Run as non-root for security
+RUN useradd -m -u 1001 botuser
 
-# Copy source
-COPY . .
+# Create directories that the bot writes to
+RUN mkdir -p tests/ui reports test-results && \
+    chown -R botuser:botuser /app
+
+# Copy deps from stage 1
+COPY --from=deps --chown=botuser:botuser /app/node_modules ./node_modules
 
 # Install Playwright without downloading browsers (using system chromium)
 RUN npx playwright install-deps chromium 2>/dev/null || true
 
-# Create directories that the bot writes to
-RUN mkdir -p tests/ui reports test-results
+# Copy source
+COPY --chown=botuser:botuser . .
 
-# Run as non-root for security
-RUN useradd -m -u 1001 botuser && chown -R botuser:botuser /app
 USER botuser
 
 EXPOSE 3000
