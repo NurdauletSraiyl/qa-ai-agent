@@ -10,13 +10,15 @@ const { handleTest, handleRegress } = require('./src/bot/handlers/testHandler');
 const { handleChecklist } = require('./src/bot/handlers/checklistHandler');
 const { handleInvestigate } = require('./src/bot/handlers/investigateHandler');
 const { handlePolicy } = require('./src/bot/handlers/policyHandler');
-const { ogpoWizard } = require('./src/bot/handlers/webOgpoPolicyHandler')
+const { ogpoWizard } = require('./src/bot/handlers/webOgpoPolicyHandler');
+const { mstWizard } = require('./src/bot/handlers/webMstPolicyHandler');
+const { nsWizard } = require('./src/bot/handlers/webNsPolicyHandlers');
 
 const bot = new Telegraf(process.env.BOT_TOKEN, {
   handlerTimeout: 10 * 60 * 1000, // 10 minutes — AI gen + PDF upload + playwright
 });
 
-const stage = new Scenes.Stage([ogpoWizard]);
+const stage = new Scenes.Stage([ogpoWizard, mstWizard, nsWizard]);
 
 bot.use(session());
 bot.use(stage.middleware());
@@ -59,10 +61,13 @@ _Пример: policy ns 820921300652_
 _Пример: policy ns NS\\-2025\\-000099_
 
 \`web ogpo\`
-Оформить полис ОГПО (Playwright + OCR)
+Оформить полис ОГПО (Playwright + OCR + CRM)
 
 \`web mst\`
-Оформить полис МСТ (Playwright + OCR)
+Оформить полис МСТ (Playwright + OCR + CRM)
+
+\`web ns\`
+Оформить полис НС (Playwright + OCR + CRM)
 
 \`help\`
 Показать это сообщение`;
@@ -102,9 +107,11 @@ bot.on(['text', 'photo', 'document'], async (ctx) => {
         return rateLimitMiddleware(ctx, () => ctx.scene.enter('OGPO_SCENE')); 
       } if (subCommand == 'mst') {
         return rateLimitMiddleware(ctx, () => ctx.scene.enter('MST_SCENE'));
+      } if (subCommand == 'ns')  {
+        return rateLimitMiddleware(ctx, () => ctx.scene.enter('NS_SCENE'));
       } else {
         return ctx.reply(
-          '⚠️ Пожалуйста, укажите продукт. Доступная команда:\n`web ogpo`, `web mst`', 
+          '⚠️ Пожалуйста, укажите продукт. Доступная команда:\n`web ogpo`, `web mst`, `web ns`', 
           { parse_mode: 'Markdown' }
         )
       }
