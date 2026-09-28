@@ -14,18 +14,27 @@ const { handlePolicy } = require('./src/bot/handlers/policyHandler');
 const { ogpoWizard } = require('./src/bot/handlers/webOgpoPolicyHandler');
 const { ogpoLegalWizard } = require('./src/bot/handlers/webOgpoLegalEntityPolicyHandlers');
 const { mstWizard } = require('./src/bot/handlers/webMstPolicyHandler');
+const { mstPremiumWizard } = require('./src/bot/handlers/webMstPremiumPolicyHandlers');
 const { nsWizard } = require('./src/bot/handlers/webNsPolicyHandlers');
+const { removeUserFromQueue } = require('./src/bot/queue')
 
 const bot = new Telegraf(process.env.BOT_TOKEN, {
   handlerTimeout: 10 * 60 * 1000, // 10 minutes — AI gen + PDF upload + playwright
 });
 
-const stage = new Scenes.Stage([ogpoWizard, ogpoLegalWizard, mstWizard, nsWizard]);
+const stage = new Scenes.Stage([ogpoWizard, ogpoLegalWizard, mstWizard, mstPremiumWizard, nsWizard]);
+
+// Команда отмены для сцен
+stage.hears('cancel', async (ctx) => {
+  await ctx.scene.leave();
+  removeUserFromQueue(ctx.from.id);
+  return ctx.reply('Процесс оформления прерван. Вы вернулись в главное меню. Можете выбрать новую команду.', { parse_mode: 'Markdown' });
+});
 
 bot.use(session());
 bot.use(stage.middleware());
 
-const HELP_TEXT = `🤖 *QA AI Agent*
+const HELP_TEXT = `*QA AI Agent*
 
 *Команды:*
 
@@ -62,19 +71,19 @@ _Пример: policy ns list_
 _Пример: policy ns 820921300652_
 _Пример: policy ns NS\\-2025\\-000099_
 
-\`web ogpo <phis\|legal>\`
+\`web ogpo individual | web ogpo legal>\`
 Оформить полис ОГПО (Playwright + OCR + CRM)
 _Пример: web ogpo phis_ — для физических лиц
 _Пример: web ogpo legal_ — для юридических лиц
 
-\`web mst\`
-Оформить полис МСТ (Playwright + OCR + CRM)
+\`web mst | web mst premium\`
+Оформить полис МСТ или МСТ Премиум (Playwright + OCR + CRM)
 
 \`web ns\`
 Оформить полис НС (Playwright + OCR + CRM)
 
-\`stats\`
-Проверить нагрузку на сервер (CPU / RAM)
+\`cancel\`
+Прервать текущее оформление полиса
 
 \`help\`
 Показать это сообщение`;
@@ -82,35 +91,7 @@ _Пример: web ogpo legal_ — для юридических лиц
 bot.use(authMiddleware);
 
 bot.start((ctx) => ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' }));
-bot.help((ctx) => ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' }));
-
-bot.command('stats', async (ctx) => {
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMem = totalMem - freeMem;
-
-  // Переводим байты в мегабайты
-  const toMB = (bytes) => (bytes / 1024 / 1024).toFixed(2);
-
-  const cpus = os.cpus();
-  const cores = cpus.length;
-  // loadavg возвращает среднюю нагрузку за 1, 5 и 15 минут
-  const loadAvg = os.loadavg()[0].toFixed(2); 
-
-  const text = `*Ресурсы сервера (ОС/Docker)*\n\n` +
-               `*CPU:* ${cores} ядер(а) | Нагрузка (1м): ${loadAvg}\n` +
-               `*RAM (Память):*\n` +
-               `• Всего: ${toMB(totalMem)} MB\n` +
-               `• Занято: ${toMB(usedMem)} MB\n` +
-               `• Свободно: ${toMB(freeMem)} MB\n\n` +
-               `_ Как замерять:_\n` +
-               `1. Вызови /stats в состоянии покоя.\n` +
-               `2. Запусти оформление полиса.\n` +
-               `3. Сразу вызови /stats еще раз (пока бот "ждет расчет").\n` +
-               `4. Разница в "Занято" = вес 1 сессии Playwright.`;
-
-  return ctx.reply(text, { parse_mode: 'Markdown' });
-});
+bot.help((ctx) => ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' })); 
 
 bot.on(['text', 'photo', 'document'], async (ctx) => {
   const text = (ctx.message.text || ctx.message.caption || '').trim();
@@ -144,11 +125,13 @@ bot.on(['text', 'photo', 'document'], async (ctx) => {
         return rateLimitMiddleware(ctx, () => ctx.scene.enter('OGPO_LEGAL_SCENE'));
       } if (subCommand === 'mst') {
         return rateLimitMiddleware(ctx, () => ctx.scene.enter('MST_SCENE'));
+      } if (subCommand === 'mst premium') {
+        return rateLimitMiddleware(ctx, () => ctx.scene.enter('MST_PREMIUM_SCENE'));
       } if (subCommand === 'ns')  {
         return rateLimitMiddleware(ctx, () => ctx.scene.enter('NS_SCENE'));
       } else {
         return ctx.reply(
-          '⚠️ Пожалуйста, укажите верный продукт. Доступные команды:\n`web ogpo phis`, `web ogpo legal`, `web mst`, `web ns`', 
+          'Пожалуйста, укажите верный продукт. Доступные команды:\n`web ogpo individual` | `web ogpo legal`\n`web mst` | `web mst premium`\n`web ns`', 
           { parse_mode: 'Markdown' }
         )
       }
@@ -159,7 +142,7 @@ bot.on(['text', 'photo', 'document'], async (ctx) => {
 
     default:
       return ctx.reply(
-        '❓ Неизвестная команда. Напиши `help` для списка команд.',
+        'Неизвестная команда. Напиши `help` для списка команд.',
         { parse_mode: 'Markdown' }
       );
   }
@@ -173,12 +156,12 @@ bot.catch((err, ctx) => {
     console.warn('[bot.catch] network error (ignored):', msg);
     return;
   }
-  ctx.reply('❌ Произошла неожиданная ошибка. Попробуй ещё раз.').catch(() => {});
+  ctx.reply('Произошла неожиданная ошибка. Попробуй ещё раз.').catch(() => {});
 });
 
 if (require.main === module) {
   bot.launch({ dropPendingUpdates: true });
-  console.log('🤖 QA AI Agent running...');
+  console.log('QA AI Agent running...');
 };
 
 module.exports = bot;
