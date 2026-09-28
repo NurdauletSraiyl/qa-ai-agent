@@ -37,12 +37,9 @@ ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Run as non-root for security
-RUN useradd -m -u 1001 botuser
-
 # Create directories that the bot writes to
-RUN mkdir -p tests/ui reports test-results && \
-    chown -R botuser:botuser /app
+# Run as non-root for security 
+RUN useradd -m -u 1001 botuser && mkdir -p tests/ui reports test-results && chown -R botuser:botuser /app
 
 # Copy deps from stage 1
 COPY --from=deps --chown=botuser:botuser /app/node_modules ./node_modules
